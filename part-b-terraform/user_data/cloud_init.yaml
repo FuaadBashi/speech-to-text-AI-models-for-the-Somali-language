@@ -1,0 +1,33 @@
+#cloud-config
+package_update: true
+packages:
+  - apache2
+  - php
+  - curl
+
+write_files:
+  - path: /var/www/html/index.php
+    permissions: '0644'
+    content: |
+      <?php
+      $hostname = gethostname();
+      $instance_id = "unknown";
+      // Common metadata endpoints (adjust for your environment/provider):
+      // Some environments require a token (IMDSv2-style); document if needed.
+      $meta_urls = [
+        "http://169.254.169.254/openstack/latest/meta_data.json",
+        "http://169.254.169.254/latest/meta-data/instance-id"
+      ];
+      foreach ($meta_urls as $u) {
+        $resp = @file_get_contents($u);
+        if ($resp !== false && strlen($resp) > 0) { $instance_id = $resp; break; }
+      }
+      header("Content-Type: text/plain");
+      echo "hostname=" . $hostname . "\n";
+      echo "instance_id=" . trim($instance_id) . "\n";
+      echo "time_utc=" . gmdate("c") . "\n";
+      ?>
+
+runcmd:
+  - systemctl enable apache2
+  - systemctl restart apache2
