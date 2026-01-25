@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Environments
+.venv/
+venv/
+env/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Outputs / artifacts
+outputs/
+*.wav
+*.mp3
+*.flac
+*.m4a
+
+# HuggingFace / datasets cache
+.cache/
+**/.cache/
+
+# Large model checkpoints
+models/
+*.safetensors
+*.bin
+
+# Logs
+*.log
