@@ -24,3 +24,6 @@ jiwer>=3.0.0
 safetensors>=0.4.0
 huggingface-hub>=0.23.0
 packaging>=23.0
+
+rapidfuzz>=3.9.7
+
