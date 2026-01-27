@@ -1,21 +1,14 @@
-# Core runtime dependencies for Part A (Python 3.9+)
-# System dependency: ffmpeg + ffprobe must be installed separately (not via pip).
-# Core training
-transformers>=4.45.0,<5.0.0
-accelerate>=1.0.0
-datasets>=3.0.0,<5.0.0
+# Core
+transformers==4.46.3
+accelerate==0.34.2
+datasets==2.20.0
+evaluate==0.4.2
 
-# Audio + metrics
-soundfile>=0.12.1
-jiwer>=4.0.0
-rapidfuzz>=3.9.7
+# Audio + WER
+soundfile==0.12.1
+librosa==0.10.2.post1
+jiwer==3.0.4
 
 # Utilities
-numpy>=1.23.0
+numpy>=1.26.0
 tqdm>=4.66.0
-regex>=2024.0.0
-huggingface-hub>=0.23.0
-safetensors>=0.4.0
-packaging>=23.0
-
-
