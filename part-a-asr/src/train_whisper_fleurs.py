@@ -11,6 +11,7 @@ Includes:
 - T4-friendly defaults
 - beam-search WER evaluation (predict_with_generate)
 - terminal "table style" logs (step/epoch/loss/lr/grad_norm/time/gpu_mem)
+- FIXED: Proper forced_decoder_ids to prevent Arabic script output
 """
 
 import argparse
@@ -45,6 +46,45 @@ def now_ts() -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def configure_whisper_prompt(processor, model, language: str, task: str = "transcribe"):
+    """
+    Force Whisper to use the correct language/task prompt during generation.
+    This prevents Arabic-script / wrong-language drift at inference/eval time.
+    
+    CRITICAL FIX: Sets forced_decoder_ids to ensure Latin script output for Somali.
+    """
+    # 1) Set tokenizer prefix tokens (keeps tokenizer.language/task from being None)
+    tok = getattr(processor, "tokenizer", None)
+    if tok is not None:
+        if hasattr(tok, "set_prefix_tokens"):
+            tok.set_prefix_tokens(language=language, task=task)
+        else:
+            # older versions
+            try:
+                tok.language = language
+                tok.task = task
+            except Exception:
+                pass
+
+    # 2) Force decoder prompt ids (Whisper-specific)
+    forced_decoder_ids = processor.get_decoder_prompt_ids(language=language, task=task)
+
+    # Put into BOTH config + generation_config (covers Trainer.generate + manual generate)
+    model.config.forced_decoder_ids = forced_decoder_ids
+    if getattr(model, "generation_config", None) is not None:
+        model.generation_config.forced_decoder_ids = forced_decoder_ids
+        # nice-to-have (some versions use these)
+        try:
+            model.generation_config.language = language
+            model.generation_config.task = task
+        except Exception:
+            pass
+
+    print(f"[PROMPT] language={language} task={task}")
+    print(f"[PROMPT] forced_decoder_ids={forced_decoder_ids}")
+    return forced_decoder_ids
+
+
 def guess_columns(ds) -> Tuple[str, str]:
     cols = list(ds.column_names)
     # Guess audio column
@@ -62,9 +102,9 @@ def guess_columns(ds) -> Tuple[str, str]:
     if audio_col is None:
         raise ValueError(f"Could not find audio column. Available columns: {cols}")
 
-    # Guess text column
+    # Guess text column - ROBUST VERSION
     text_col = None
-    for c in ["sentence", "text", "transcription", "transcript", "normalized_text"]:
+    for c in ["sentence", "text", "transcription", "transcript", "normalized_text", "raw_transcription"]:
         if c in cols:
             text_col = c
             break
@@ -82,7 +122,7 @@ def normalize_somali_text(s: str) -> str:
     - collapse whitespace
     """
     s = s.lower().strip()
-    s = re.sub(r"[“”\"'`´’]", "", s)
+    s = re.sub(r"[""\"'`´']", "", s)
     s = re.sub(r"[^a-z0-9\s\-]", " ", s)  # keep letters/digits/hyphen
     s = re.sub(r"\s+", " ", s).strip()
     return s
@@ -170,7 +210,10 @@ class TableLoggerCallback(TrainerCallback):
         )
 
 
-def build_compute_metrics(processor: WhisperProcessor):
+def build_compute_metrics(processor: WhisperProcessor, forced_decoder_ids):
+    """
+    FIXED: Now accepts forced_decoder_ids to pass to model.generate during eval
+    """
     wer = evaluate.load("wer")
     basic_norm = BasicTextNormalizer() if BasicTextNormalizer is not None else None
 
@@ -249,7 +292,11 @@ def prepare_fleurs_train(
     max_audio_seconds: float,
     fleurs_lang: str = "so_so",
 ):
-    fleurs = load_dataset("google/fleurs", fleurs_lang, split="train")
+    """
+    FIXED: Added trust_remote_code=True to avoid interactive prompt crash
+    """
+    print(f"[{now_ts()}] Loading FLEURS dataset with trust_remote_code=True...")
+    fleurs = load_dataset("google/fleurs", fleurs_lang, split="train", trust_remote_code=True)
     audio_col, text_col = guess_columns(fleurs)
     fleurs = fleurs.cast_column(audio_col, Audio(sampling_rate=16000))
 
@@ -344,6 +391,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--base_model", default="openai/whisper-medium")
     ap.add_argument("--language", default="somali", help="Whisper language name, e.g. 'somali'")
+    ap.add_argument("--task", default="transcribe", choices=["transcribe", "translate"])
     ap.add_argument("--out_dir", default="outputs/checkpoints/whisper_medium_two_stage_t4")
 
     ap.add_argument("--stage_a_dataset", default="skydheere/soomali-asr-dataset")
@@ -400,15 +448,18 @@ def main():
 
     # Processor + Model
     processor = WhisperProcessor.from_pretrained(args.base_model)
-
     model = WhisperForConditionalGeneration.from_pretrained(args.base_model)
+
+    # CRITICAL FIX: Configure Somali + transcribe prompt
+    forced_decoder_ids = configure_whisper_prompt(
+        processor=processor,
+        model=model,
+        language=args.language,
+        task=args.task
+    )
 
     # IMPORTANT for training with gradient checkpointing
     model.config.use_cache = False
-
-    # Configure language/task in generation config (modern approach)
-    model.generation_config.language = args.language
-    model.generation_config.task = "transcribe"
 
     # Optional memory saver
     if args.freeze_encoder:
@@ -439,7 +490,7 @@ def main():
         processor=processor, decoder_start_token_id=model.config.decoder_start_token_id
     )
 
-    compute_metrics = build_compute_metrics(processor)
+    compute_metrics = build_compute_metrics(processor, forced_decoder_ids)
 
     stage_a_dir = os.path.join(args.out_dir, "stage_a")
     training_args_a = make_training_args(

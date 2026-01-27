@@ -1,151 +1,164 @@
 #!/usr/bin/env python3
 """
-Evaluate a fine-tuned Whisper checkpoint on one or more local WAV files with beam search.
-
-Example:
-  python src/eval_verification.py \
-    --model_dir outputs/checkpoints/whisper_medium_two_stage_t4/stage_a \
-    --pairs verification_pairs.tsv \
-    --num_beams 8
-
-TSV format (tab-separated):
-  /path/to/audio.wav<TAB>reference transcription
+Quick verification.wav WER test with proper Somali Latin script configuration
 """
-
-import argparse
-import csv
-import json
 import os
-import re
-from dataclasses import asdict, dataclass
-from typing import List, Tuple
-
-import numpy as np
+import argparse
 import torch
 import soundfile as sf
-import evaluate
-from transformers import WhisperForConditionalGeneration, WhisperProcessor
+from transformers import WhisperProcessor, WhisperForConditionalGeneration
 
 try:
-    from transformers.models.whisper.english_normalizer import BasicTextNormalizer
-except Exception:
-    BasicTextNormalizer = None
+    from text_normalize import normalize_text
+except ModuleNotFoundError:
+    import sys
+    sys.path.append(os.path.dirname(__file__))
+    from text_normalize import normalize_text
 
 
-def normalize_somali_text(s: str) -> str:
-    s = s.lower().strip()
-    s = re.sub(r"[“”\"'`´’]", "", s)
-    s = re.sub(r"[^a-z0-9\s\-]", " ", s)
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
-
-
-def load_pairs_tsv(path: str) -> List[Tuple[str, str]]:
-    pairs = []
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            wav, ref = line.split("\t", 1)
-            pairs.append((wav, ref))
-    return pairs
-
-
-def read_wav_16k_mono(path: str) -> np.ndarray:
-    audio, sr = sf.read(path)
-    if audio.ndim > 1:
-        audio = np.mean(audio, axis=1)
-    if sr != 16000:
-        # simple resample (good enough for eval); for best quality use librosa.resample
-        import librosa
-        audio = librosa.resample(audio.astype(np.float32), orig_sr=sr, target_sr=16000)
-    return audio.astype(np.float32)
-
-
-@dataclass
-class Row:
-    file: str
-    ref: str
-    hyp: str
-    ref_norm: str
-    hyp_norm: str
-    wer: float
-
-
+@torch.inference_mode()
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model_dir", required=True)
-    ap.add_argument("--pairs", required=True, help="TSV: wav_path<TAB>reference")
+    ap.add_argument("--ver_wav", required=True, help="Path to verification.wav")
+    ap.add_argument("--language", default="somali")
+    ap.add_argument("--task", default="transcribe", choices=["transcribe", "translate"])
     ap.add_argument("--num_beams", type=int, default=5)
-    ap.add_argument("--max_new_tokens", type=int, default=225)
-    ap.add_argument("--out_dir", default="outputs/verification_eval")
+    ap.add_argument("--output_dir", default="outputs/metrics/verification")
+    ap.add_argument("--reference_text", default=None, help="Optional: reference transcription for WER calculation")
     args = ap.parse_args()
 
-    os.makedirs(args.out_dir, exist_ok=True)
+    os.makedirs(args.output_dir, exist_ok=True)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-
+    
+    print(f"Loading model from: {args.model_dir}")
     processor = WhisperProcessor.from_pretrained(args.model_dir)
     model = WhisperForConditionalGeneration.from_pretrained(args.model_dir).to(device)
     model.eval()
 
-    wer_metric = evaluate.load("wer")
-    basic_norm = BasicTextNormalizer() if BasicTextNormalizer is not None else None
-
-    pairs = load_pairs_tsv(args.pairs)
-
-    rows: List[Row] = []
-
-    print("IDX  FILE                            BEAMS  WER")
-    print("---  ------------------------------  -----  -----")
-
-    for i, (wav_path, ref) in enumerate(pairs, start=1):
-        audio = read_wav_16k_mono(wav_path)
-        inputs = processor.feature_extractor(audio, sampling_rate=16000, return_tensors="pt")
-        input_features = inputs["input_features"].to(device)
-
-        with torch.no_grad():
-            pred_ids = model.generate(
-                input_features,
-                num_beams=args.num_beams,
-                max_new_tokens=args.max_new_tokens,
-            )
-
-        hyp = processor.tokenizer.batch_decode(pred_ids, skip_special_tokens=True)[0]
-
-        if basic_norm is not None:
-            ref_n = basic_norm(ref)
-            hyp_n = basic_norm(hyp)
+    # ========================================================================
+    # CRITICAL: Configure forced_decoder_ids for Somali Latin script
+    # ========================================================================
+    forced_decoder_ids = processor.get_decoder_prompt_ids(language=args.language, task=args.task)
+    
+    tok = getattr(processor, "tokenizer", None)
+    if tok is not None:
+        if hasattr(tok, "set_prefix_tokens"):
+            tok.set_prefix_tokens(language=args.language, task=args.task)
         else:
-            ref_n = normalize_somali_text(ref)
-            hyp_n = normalize_somali_text(hyp)
+            try:
+                tok.language = args.language
+                tok.task = args.task
+            except Exception:
+                pass
+    
+    model.config.forced_decoder_ids = forced_decoder_ids
+    if getattr(model, "generation_config", None) is not None:
+        model.generation_config.forced_decoder_ids = forced_decoder_ids
+        try:
+            model.generation_config.language = args.language
+            model.generation_config.task = args.task
+        except Exception:
+            pass
+    
+    print(f"[PROMPT] language={args.language} task={args.task}")
+    print(f"[PROMPT] forced_decoder_ids={forced_decoder_ids}")
+    # ========================================================================
 
-        wer_val = wer_metric.compute(predictions=[hyp_n], references=[ref_n])
+    # Load audio
+    print(f"\nLoading audio: {args.ver_wav}")
+    audio, sr = sf.read(args.ver_wav)
+    
+    # Resample if needed
+    if sr != 16000:
+        import librosa
+        audio = librosa.resample(audio, orig_sr=sr, target_sr=16000)
+        sr = 16000
+    
+    # Convert to mono if stereo
+    if audio.ndim > 1:
+        audio = audio.mean(axis=1)
+    
+    print(f"Audio: {len(audio)/sr:.2f}s @ {sr}Hz")
 
-        print(f"{i:3d}  {os.path.basename(wav_path)[:30]:30s}  {args.num_beams:5d}  {wer_val:0.3f}")
-
-        rows.append(Row(
-            file=wav_path,
-            ref=ref,
-            hyp=hyp,
-            ref_norm=ref_n,
-            hyp_norm=hyp_n,
-            wer=float(wer_val),
-        ))
-
-    avg_wer = float(np.mean([r.wer for r in rows])) if rows else 1.0
-    print(f"\nDONE. Mean WER (normalized) = {avg_wer:.4f}")
-
-    # Save artifacts
-    with open(os.path.join(args.out_dir, "rows.json"), "w", encoding="utf-8") as f:
-        json.dump([asdict(r) for r in rows], f, ensure_ascii=False, indent=2)
-
-    with open(os.path.join(args.out_dir, "rows.csv"), "w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(asdict(rows[0]).keys()) if rows else ["file","ref","hyp","ref_norm","hyp_norm","wer"])
-        w.writeheader()
-        for r in rows:
-            w.writerow(asdict(r))
+    # Process and generate
+    inputs = processor(audio, sampling_rate=16000, return_tensors="pt").input_features.to(device)
+    
+    print(f"\nGenerating transcription (beams={args.num_beams})...")
+    pred_ids = model.generate(
+        inputs,
+        num_beams=args.num_beams,
+        max_new_tokens=128,
+        forced_decoder_ids=forced_decoder_ids,  # CRITICAL
+    )
+    
+    pred_text = processor.batch_decode(pred_ids, skip_special_tokens=True)[0]
+    
+    # Save prediction
+    pred_path = os.path.join(args.output_dir, "verification_pred.txt")
+    with open(pred_path, "w", encoding="utf-8") as f:
+        f.write(pred_text)
+    
+    print(f"\n{'='*70}")
+    print(f"TRANSCRIPTION:")
+    print(f"{'='*70}")
+    print(pred_text)
+    print(f"{'='*70}")
+    print(f"\nSaved to: {pred_path}")
+    
+    # Calculate WER if reference provided
+    if args.reference_text:
+        def simple_wer(hyp, ref):
+            hyp_norm = normalize_text(hyp)
+            ref_norm = normalize_text(ref)
+            hyp_words = hyp_norm.split()
+            ref_words = ref_norm.split()
+            
+            # Simple edit distance
+            dp = [[0] * (len(hyp_words) + 1) for _ in range(len(ref_words) + 1)]
+            for i in range(len(ref_words) + 1):
+                dp[i][0] = i
+            for j in range(len(hyp_words) + 1):
+                dp[0][j] = j
+            for i in range(1, len(ref_words) + 1):
+                for j in range(1, len(hyp_words) + 1):
+                    cost = 0 if ref_words[i-1] == hyp_words[j-1] else 1
+                    dp[i][j] = min(dp[i-1][j] + 1, dp[i][j-1] + 1, dp[i-1][j-1] + cost)
+            
+            edits = dp[len(ref_words)][len(hyp_words)]
+            wer = edits / len(ref_words) if len(ref_words) > 0 else 0.0
+            return wer, edits, len(ref_words)
+        
+        wer, edits, ref_words = simple_wer(pred_text, args.reference_text)
+        
+        print(f"\n{'='*70}")
+        print(f"WER RESULTS:")
+        print(f"{'='*70}")
+        print(f"Reference: {args.reference_text}")
+        print(f"Hypothesis: {pred_text}")
+        print(f"\nNormalized:")
+        print(f"Reference: {normalize_text(args.reference_text)}")
+        print(f"Hypothesis: {normalize_text(pred_text)}")
+        print(f"\nWER: {wer:.4f} ({edits} edits / {ref_words} words)")
+        print(f"{'='*70}")
+        
+        # Save results
+        results = {
+            "reference": args.reference_text,
+            "hypothesis": pred_text,
+            "reference_normalized": normalize_text(args.reference_text),
+            "hypothesis_normalized": normalize_text(pred_text),
+            "wer": float(wer),
+            "edits": edits,
+            "ref_words": ref_words,
+        }
+        
+        import json
+        results_path = os.path.join(args.output_dir, "verification_results.json")
+        with open(results_path, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=2, ensure_ascii=False)
+        print(f"Results saved to: {results_path}")
 
 
 if __name__ == "__main__":

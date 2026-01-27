@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""
+FIXED evaluate_wer.py - Properly configured for Somali Latin script output
+
+Key fixes:
+- Sets forced_decoder_ids to prevent Arabic script output
+- Robust transcript field detection (sentence/text/transcription/etc)
+- Proper language/task configuration
+"""
 import os
 import io
 import re
@@ -52,7 +60,8 @@ def load_audio_16k_mono(audio_obj: Dict[str, Any]) -> np.ndarray:
 
 
 def pick_text(ex: Dict[str, Any]) -> str:
-    for k in ["sentence", "text", "transcription", "transcript", "raw_transcription"]:
+    """Robust transcript field selector - tries common field names"""
+    for k in ["sentence", "text", "transcription", "transcript", "raw_transcription", "normalized_text"]:
         if k in ex and ex[k] is not None and str(ex[k]).strip() != "":
             return str(ex[k])
     return ""
@@ -108,7 +117,7 @@ def main():
     ap.add_argument("--batch_size", type=int, default=2)
     ap.add_argument("--max_new_tokens", type=int, default=128)
 
-    # NEW:
+    # CRITICAL: Language/task args
     ap.add_argument("--language", default="somali", help="Whisper language prompt")
     ap.add_argument("--task", default="transcribe", choices=["transcribe", "translate"])
     ap.add_argument("--output_dir", default="outputs/metrics", help="Where to write reports")
@@ -121,12 +130,40 @@ def main():
     model = WhisperForConditionalGeneration.from_pretrained(args.model_dir).to(device)
     model.eval()
 
-    # Force Somali + transcribe during decoding (IMPORTANT for WER)
+    # ========================================================================
+    # CRITICAL FIX: Configure forced_decoder_ids for Somali Latin script
+    # ========================================================================
     forced_decoder_ids = processor.get_decoder_prompt_ids(language=args.language, task=args.task)
+    
+    # Set on tokenizer (prevents None values)
+    tok = getattr(processor, "tokenizer", None)
+    if tok is not None:
+        if hasattr(tok, "set_prefix_tokens"):
+            tok.set_prefix_tokens(language=args.language, task=args.task)
+        else:
+            try:
+                tok.language = args.language
+                tok.task = args.task
+            except Exception:
+                pass
+    
+    # Set on model config AND generation_config (belt and suspenders)
+    model.config.forced_decoder_ids = forced_decoder_ids
+    if getattr(model, "generation_config", None) is not None:
+        model.generation_config.forced_decoder_ids = forced_decoder_ids
+        try:
+            model.generation_config.language = args.language
+            model.generation_config.task = args.task
+        except Exception:
+            pass
+    
+    print(f"[PROMPT] language={args.language} task={args.task}")
+    print(f"[PROMPT] forced_decoder_ids={forced_decoder_ids}")
+    # ========================================================================
 
     # Load dataset
     if args.data_dir:
-        ds = load_dataset(args.dataset, data_dir=args.data_dir, split=args.split, revision="refs/convert/parquet")
+        ds = load_dataset(args.dataset, data_dir=args.data_dir, split=args.split, trust_remote_code=True)
     else:
         ds_all = load_dataset(args.dataset)
         ds = ds_all[args.split] if isinstance(ds_all, dict) else ds_all
@@ -161,7 +198,7 @@ def main():
             feats,
             num_beams=args.num_beams,
             max_new_tokens=args.max_new_tokens,
-            forced_decoder_ids=forced_decoder_ids,
+            forced_decoder_ids=forced_decoder_ids,  # CRITICAL: Pass explicitly
         )
 
         batch_hyps_raw = processor.tokenizer.batch_decode(gen, skip_special_tokens=True)
