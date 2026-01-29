@@ -1,14 +1,30 @@
-# Force-fix for the 'torchcodec' ModuleNotFoundError
-datasets==2.19.0
+# =============================================================================
+# Somali ASR Training & Evaluation - Dependencies
+# =============================================================================
+
+
 transformers==4.44.2
+datasets==2.19.0
 accelerate==0.34.2
 evaluate==0.4.2
+librosa==0.11.0
 
-# Audio Engine (The reliable legacy stack)
+torch>=2.0.0
+torchaudio>=2.0.0
+
 soundfile==0.12.1
 librosa==0.10.2.post1
+
+
 jiwer==3.0.4
 
-# Utilities
 numpy==1.26.4
+pandas>=2.0.0
+
 tqdm==4.66.0
+sentencepiece>=0.1.99
+
+tensorboard>=2.14.0      # For training visualization
+matplotlib>=3.7.0        # For plotting
+scipy>=1.11.0            # For signal processing
+
