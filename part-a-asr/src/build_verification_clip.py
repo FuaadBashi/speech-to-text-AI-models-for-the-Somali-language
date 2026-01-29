@@ -1,16 +1,3 @@
-#!/usr/bin/env python3
-"""
-Build 5-minute verification clip from skydheere/soomali-asr-dataset.
-
-STRATEGY:
-- Concatenate short clips (+ 1s silence between) into one 5-minute WAV
-- Save manifest with per-segment boundaries (start/end/text)
-- Evaluate per-segment (NOT as one 5-minute utterance)
-- This matches training conditions and avoids long-form issues
-
-This is the CORRECT way to handle verification on concatenated audio.
-"""
-
 import json
 import os
 import numpy as np
@@ -59,37 +46,37 @@ def build_verification_clip():
     print("="*80)
     print("BUILDING 5-MINUTE VERIFICATION CLIP")
     print("="*80)
-    
-    # Load dataset WITHOUT auto-decoding (avoids torchcodec)
+
+    # Load dataset WITHOUT auto-decoding (avoids torchcodec issues)
     print("\n📥 Loading dataset...")
     ds = load_dataset("skydheere/soomali-asr-dataset", split="validation")
     ds = ds.cast_column("audio", Audio(decode=False))
     print(f"✓ Loaded {len(ds)} samples from validation split")
-    
+
     audio_segments = []
     manifest = []
     current_time = 0.0
     failed_count = 0
     total_words_raw = 0
     total_words_norm = 0
-    
+
     print("\n🔊 Processing audio segments...")
     for i in tqdm(range(len(ds)), desc="Building clip"):
         if current_time >= TARGET_SECONDS:
             break
-        
+
         try:
             sample = ds[i]
             text_raw = sample["transcription"].strip()
             if not text_raw:
                 continue
-            
+
             # Normalize text (for evaluation)
             text_norm = normalize_text(text_raw)
-            
-            # Decode audio manually
+
+            # Decode audio manually (robust method)
             audio_data = sample["audio"]
-            
+
             # Try path first
             if "path" in audio_data and audio_data["path"] and os.path.exists(audio_data["path"]):
                 audio, sr = sf.read(audio_data["path"])
@@ -104,24 +91,24 @@ def build_verification_clip():
             else:
                 failed_count += 1
                 continue
-            
+
             # Ensure numpy array
             audio = np.array(audio, dtype=np.float32)
-            
+
             # Convert stereo to mono
             if audio.ndim > 1:
                 audio = np.mean(audio, axis=1)
-            
+
             # Resample if needed
             if sr != OUT_SR:
                 audio = librosa.resample(audio, orig_sr=sr, target_sr=OUT_SR)
-            
+
             duration = len(audio) / OUT_SR
-            
+
             # Skip very short clips
             if duration < 0.5:
                 continue
-            
+
             # Add to manifest
             segment_info = {
                 "segment_id": len(manifest),
@@ -135,40 +122,40 @@ def build_verification_clip():
                 "word_count_normalized": len(text_norm.split()),
             }
             manifest.append(segment_info)
-            
+
             # Add audio
             audio_segments.append(audio)
-            
+
             # Add silence pause
             silence = np.zeros(int(PAUSE_DURATION * OUT_SR), dtype=np.float32)
             audio_segments.append(silence)
-            
+
             current_time += (duration + PAUSE_DURATION)
             total_words_raw += len(text_raw.split())
             total_words_norm += len(text_norm.split())
-            
+
         except Exception as e:
             failed_count += 1
             if failed_count <= 3:
                 print(f"\n⚠️  Error on sample {i}: {e}")
             continue
-    
+
     if not audio_segments:
         raise ValueError("No audio segments were successfully processed!")
-    
+
     print(f"\n✓ Processed {len(manifest)} segments")
     if failed_count > 0:
         print(f"⚠️  Failed to process {failed_count} samples")
-    
+
     # Concatenate all audio
     print("\n🔗 Concatenating audio...")
     full_audio = np.concatenate(audio_segments)
-    
+
     # Save WAV
     print(f"💾 Saving WAV file...")
     sf.write(OUT_WAV, full_audio, OUT_SR)
     actual_duration = len(full_audio) / OUT_SR
-    
+
     # Save manifest
     print(f"💾 Saving manifest...")
     manifest_data = {
@@ -184,10 +171,10 @@ def build_verification_clip():
         "normalization": "BasicTextNormalizer",
         "segments": manifest
     }
-    
+
     with open(OUT_MANIFEST, "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2, ensure_ascii=False)
-    
+
     # Summary
     print("\n" + "="*80)
     print("✅ VERIFICATION CLIP CREATED")
@@ -204,202 +191,39 @@ def build_verification_clip():
     print(f"  Duration: {actual_duration/len(manifest):.1f}s")
     print(f"  Words: {total_words_norm/len(manifest):.1f}")
     print("="*80)
-    
+
     # Verify alignment (spot check)
     verify_alignment()
 
 def verify_alignment():
     """Spot check: verify manifest timestamps match audio."""
     print("\n🔍 SPOT CHECK: Verifying alignment...")
-    
+
     if not os.path.exists(OUT_WAV) or not os.path.exists(OUT_MANIFEST):
         print("❌ Files not found")
         return
-    
+
     # Load
     audio_full, sr = sf.read(OUT_WAV)
     with open(OUT_MANIFEST, "r") as f:
         manifest_data = json.load(f)
-    
+
     # Check first segment
     seg = manifest_data["segments"][0]
     start_idx = int(seg["start_sec"] * sr)
     end_idx = int(seg["end_sec"] * sr)
     segment_audio = audio_full[start_idx:end_idx]
-    
+
     actual_dur = len(segment_audio) / sr
     expected_dur = seg["duration_sec"]
-    
+
     print(f"Segment 0: '{seg['text_normalized'][:50]}...'")
     print(f"  Expected: {expected_dur:.3f}s | Actual: {actual_dur:.3f}s")
-    
+
     if abs(actual_dur - expected_dur) < 0.01:
         print("✅ ALIGNMENT VERIFIED")
     else:
         print("⚠️  ALIGNMENT MISMATCH")
 
-# =============================================================================
-# EVALUATE PER-SEGMENT (THE CORRECT WAY)
-# =============================================================================
-def evaluate_verification_per_segment(checkpoint_path):
-    """
-    Evaluate the 5-minute verification clip by processing each segment
-    individually (matching training conditions).
-    
-    This is the CORRECT way to evaluate concatenated audio.
-    """
-    from transformers import WhisperForConditionalGeneration, WhisperProcessor
-    import torch
-    from jiwer import wer
-    import time
-    
-    print("\n" + "="*80)
-    print("EVALUATING VERIFICATION CLIP (PER-SEGMENT)")
-    print("="*80)
-    
-    # Load manifest
-    print(f"\n📥 Loading manifest...")
-    with open(OUT_MANIFEST, "r") as f:
-        manifest_data = json.load(f)
-    
-    segments = manifest_data["segments"]
-    print(f"✓ Loaded {len(segments)} segments")
-    
-    # Load audio
-    print(f"📥 Loading audio...")
-    audio_full, sr = sf.read(OUT_WAV)
-    print(f"✓ Loaded {len(audio_full)/sr:.1f}s of audio")
-    
-    # Load model
-    print(f"📥 Loading model from: {checkpoint_path}")
-    model = WhisperForConditionalGeneration.from_pretrained(checkpoint_path)
-    processor = WhisperProcessor.from_pretrained(checkpoint_path)
-    
-    # Configure for Somali
-    forced_decoder_ids = processor.get_decoder_prompt_ids(language="somali", task="transcribe")
-    print(f"✓ Forced decoder IDs: {forced_decoder_ids}")
-    
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = model.to(device)
-    model.eval()
-    print(f"✓ Model on: {device}")
-    
-    # Evaluate each segment
-    print(f"\n🔮 Evaluating {len(segments)} segments...")
-    predictions = []
-    references = []
-    start_time = time.time()
-    
-    for i, seg in enumerate(tqdm(segments, desc="Evaluating segments")):
-        # Extract segment audio
-        start_idx = int(seg["start_sec"] * sr)
-        end_idx = int(seg["end_sec"] * sr)
-        segment_audio = audio_full[start_idx:end_idx]
-        
-        # Process with model
-        input_features = processor(
-            segment_audio,
-            sampling_rate=sr,
-            return_tensors="pt"
-        ).input_features.to(device)
-        
-        # Generate
-        with torch.no_grad():
-            predicted_ids = model.generate(
-                input_features,
-                forced_decoder_ids=forced_decoder_ids,
-                max_length=448,  # Standard for 30s
-                num_beams=5,
-                length_penalty=1.0,
-            )
-        
-        # Decode
-        pred_text = processor.tokenizer.decode(predicted_ids[0], skip_special_tokens=True)
-        pred_norm = normalize_text(pred_text)
-        
-        # Store
-        predictions.append(pred_norm)
-        references.append(seg["text_normalized"])
-    
-    inference_time = time.time() - start_time
-    
-    # Compute WER
-    print(f"\n📊 Computing WER...")
-    
-    # Concatenate all segments
-    full_prediction = " ".join(predictions)
-    full_reference = " ".join(references)
-    
-    wer_score = wer(full_reference, full_prediction)
-    
-    # Per-segment WER
-    segment_wers = []
-    for pred, ref in zip(predictions, references):
-        if ref:  # Skip empty references
-            seg_wer = wer(ref, pred)
-            segment_wers.append(seg_wer)
-    
-    avg_segment_wer = np.mean(segment_wers) if segment_wers else 0.0
-    
-    # Results
-    print(f"\n" + "="*80)
-    print("RESULTS")
-    print("="*80)
-    print(f"Checkpoint: {checkpoint_path}")
-    print(f"Segments evaluated: {len(segments)}")
-    print(f"Inference time: {inference_time:.1f}s")
-    print(f"Time per segment: {inference_time/len(segments):.2f}s")
-    print(f"\nWER (full concatenation): {wer_score*100:.2f}% ({wer_score:.4f})")
-    print(f"WER (avg per segment): {avg_segment_wer*100:.2f}% ({avg_segment_wer:.4f})")
-    print(f"\nWord counts:")
-    print(f"  Predicted: {len(full_prediction.split())} words")
-    print(f"  Reference: {len(full_reference.split())} words")
-    print(f"  Coverage: {len(full_prediction.split())/len(full_reference.split())*100:.1f}%")
-    print("="*80)
-    
-    # Success criteria
-    if wer_score <= 0.20:
-        print(f"\n🎉 ✅ TARGET ACHIEVED!")
-        print(f"   WER {wer_score*100:.1f}% ≤ 20%")
-    elif wer_score <= 0.30:
-        print(f"\n✓ Good performance: {wer_score*100:.1f}% WER")
-    else:
-        print(f"\n⚠️  WER {wer_score*100:.1f}% is higher than target")
-    
-    # Show sample predictions
-    print(f"\n📝 Sample predictions (first 3 segments):")
-    for i in range(min(3, len(segments))):
-        print(f"\nSegment {i+1}:")
-        print(f"  Ref: {references[i][:80]}...")
-        print(f"  Hyp: {predictions[i][:80]}...")
-        if references[i]:
-            seg_wer = wer(references[i], predictions[i])
-            print(f"  WER: {seg_wer*100:.1f}%")
-    
-    # Save results
-    results = {
-        "checkpoint": checkpoint_path,
-        "evaluation_method": "per_segment",
-        "num_segments": len(segments),
-        "inference_time_sec": float(inference_time),
-        "wer_full": float(wer_score),
-        "wer_avg_segment": float(avg_segment_wer),
-        "prediction_word_count": len(full_prediction.split()),
-        "reference_word_count": len(full_reference.split()),
-        "predictions": predictions,
-        "references": references,
-        "target_achieved": wer_score <= 0.20
-    }
-    
-    results_file = os.path.join(OUT_DIR, "evaluation_results_per_segment.json")
-    with open(results_file, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
-    
-    print(f"\n💾 Results saved to: {results_file}")
-    print("="*80)
-    
-    return wer_score
-
-if __name__ == "__main__":
-    # Build the verification clip
-    build_verification_clip()
+# Run the builder
+build_verification_clip()

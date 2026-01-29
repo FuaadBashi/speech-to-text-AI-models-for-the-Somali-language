@@ -1,14 +1,14 @@
-# Core
-transformers==4.46.3
+# Force-fix for the 'torchcodec' ModuleNotFoundError
+datasets==2.19.0
+transformers==4.44.2
 accelerate==0.34.2
-datasets==2.20.0
 evaluate==0.4.2
 
-# Audio + WER
+# Audio Engine (The reliable legacy stack)
 soundfile==0.12.1
 librosa==0.10.2.post1
 jiwer==3.0.4
 
 # Utilities
-numpy>=1.26.0
-tqdm>=4.66.0
+numpy==1.26.4
+tqdm==4.66.0
