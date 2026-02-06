@@ -1,6 +1,7 @@
 # Elastic Load Balancer
 resource "huaweicloud_elb_loadbalancer" "main" {
   name              = "${var.project_name}-${var.environment}-elb"
+  availability_zone = ["region-02a"] 
   vpc_id            = huaweicloud_vpc.main.id
   ipv4_subnet_id    = huaweicloud_vpc_subnet.public.ipv4_subnet_id
   cross_vpc_backend = false
@@ -75,9 +76,7 @@ resource "huaweicloud_elb_monitor" "main" {
   max_retries = 3
   url_path    = "/"
   port        = 80
-
-  # Expected HTTP codes for healthy instances
-  expected_codes = "200"
+  status_code = "200"
 }
 
 # Manual backend members (for testing before auto-scaling)

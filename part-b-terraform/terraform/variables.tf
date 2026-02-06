@@ -1,106 +1,81 @@
+# Authentication Variables
+variable "region" {
+  description = "HTG Cloud Region"
+  type        = string
+  default     = "Mogadishu-region-hq3"
+}
+
 variable "access_key" {
-  description = "Huawei Cloud Access Key"
+  description = "HTG Cloud Access Key"
   type        = string
   sensitive   = true
 }
 
 variable "secret_key" {
-  description = "Huawei Cloud Secret Key"
+  description = "HTG Cloud Secret Key"
   type        = string
   sensitive   = true
 }
 
-variable "region" {
-  description = "Huawei Cloud Region"
+# SSH Configuration
+variable "key_pair_name" {
+  description = "SSH key pair name for instances"
   type        = string
-  default     = "ap-southeast-1"
 }
 
+variable "admin_cidr" {
+  description = "Admin IP address in CIDR format for SSH access"
+  type        = string
+}
+
+# Database Configuration
+variable "db_password" {
+  description = "RDS Database password"
+  type        = string
+  sensitive   = true
+}
+
+# Project Configuration
 variable "project_name" {
   description = "Project name for resource naming"
   type        = string
-  default     = "somali-asr-infra"
+  default     = "somali-asr"
 }
 
 variable "environment" {
   description = "Environment (dev/staging/prod)"
   type        = string
-  default     = "dev"
+  default     = "prod"
 }
 
-variable "vpc_cidr" {
-  description = "VPC CIDR block"
+# Compute Configuration
+variable "instance_flavor" {
+  description = "ECS instance flavor/type"
   type        = string
-  default     = "10.0.0.0/16"
-}
-
-variable "public_subnet_cidr" {
-  description = "Public subnet CIDR block"
-  type        = string
-  default     = "10.0.1.0/24"
-}
-
-variable "private_subnet_cidr" {
-  description = "Private subnet CIDR block"
-  type        = string
-  default     = "10.0.2.0/24"
+  default     = "s6.large.2"
 }
 
 variable "availability_zone" {
   description = "Availability zone for resources"
   type        = string
-  default     = "ap-southeast-1a"
+  default     = "Mogadishu-region-hq3a"
 }
 
-variable "key_pair_name" {
-  description = "SSH key pair name (must exist in Huawei Cloud)"
+# Network Configuration
+variable "vpc_cidr" {
+  description = "CIDR block for VPC"
   type        = string
+  default     = "10.0.0.0/16"
 }
 
-variable "admin_cidr" {
-  description = "Admin IP CIDR for SSH access (your public IP or VPN CIDR)"
+variable "public_subnet_cidr" {
+  description = "CIDR block for public subnet"
   type        = string
-  default     = "0.0.0.0/0"  # CHANGE THIS in production to your specific IP/VPN
+  default     = "10.0.1.0/24"
 }
 
-variable "instance_flavor" {
-  description = "ECS instance flavor"
+variable "private_subnet_cidr" {
+  description = "CIDR block for private subnet"
   type        = string
-  default     = "s6.small.1"
-}
-
-variable "instance_image" {
-  description = "ECS instance image ID (Ubuntu 22.04)"
-  type        = string
-  default     = "ubuntu_22_04_x86_64"  # This may need adjustment based on region
-}
-
-variable "db_password" {
-  description = "RDS MySQL root password"
-  type        = string
-  sensitive   = true
-}
-
-variable "db_username" {
-  description = "RDS MySQL root username"
-  type        = string
-  default     = "admin"
-}
-
-variable "asg_min_size" {
-  description = "Auto Scaling Group minimum size"
-  type        = number
-  default     = 2
-}
-
-variable "asg_max_size" {
-  description = "Auto Scaling Group maximum size"
-  type        = number
-  default     = 4
-}
-
-variable "asg_desired_capacity" {
-  description = "Auto Scaling Group desired capacity"
-  type        = number
-  default     = 2
+  default     = "10.0.2.0/24"
 }

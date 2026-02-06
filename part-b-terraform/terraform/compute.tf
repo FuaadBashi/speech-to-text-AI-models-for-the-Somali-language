@@ -1,16 +1,12 @@
-# Note: This file creates initial test instances
-# For production, these will be replaced by auto-scaling group
-
-# Get the latest Ubuntu 22.04 image
-data "huaweicloud_images_image" "ubuntu" {
-  name        = "Ubuntu 22.04 server 64bit"
-  most_recent = true
-  visibility  = "public"
+# Use a common Ubuntu 22.04 image ID for HTG Cloud
+locals {
+  # This will be replaced with actual image ID from console
+  ubuntu_image_id = "REPLACE_WITH_ACTUAL_IMAGE_ID"
 }
 
-# EIP for test instance (temporary - remove when using private subnet)
+# EIP for test instance (disabled by default)
 resource "huaweicloud_vpc_eip" "test_instance" {
-  count = 1  # Set to 0 when using auto-scaling
+  count = 0  # Set to 1 to enable test instance
 
   publicip {
     type = "5_bgp"
@@ -28,19 +24,19 @@ resource "huaweicloud_vpc_eip" "test_instance" {
   }
 }
 
-# Test ECS Instance (for initial testing)
+# Test ECS Instance (disabled by default)
 resource "huaweicloud_compute_instance" "test_web" {
-  count = 1  # Set to 0 when using auto-scaling
+  count = 0  # Set to 1 to enable test instance
 
-  name              = "${var.project_name}-${var.environment}-test-web-${count.index + 1}"
-  image_id          = data.huaweicloud_images_image.ubuntu.id
-  flavor_id         = var.instance_flavor
-  key_pair          = var.key_pair_name
+  name               = "${var.project_name}-${var.environment}-test-web-${count.index + 1}"
+  image_id           = local.ubuntu_image_id
+  flavor_id          = var.instance_flavor
+  key_pair           = var.key_pair_name
   security_group_ids = [huaweicloud_networking_secgroup.web.id]
-  availability_zone = var.availability_zone
+  availability_zone  = var.availability_zone
 
   network {
-    uuid = huaweicloud_vpc_subnet.public.id  # Change to private subnet later
+    uuid = huaweicloud_vpc_subnet.public.id
   }
 
   user_data = file("${path.module}/user-data.sh")
@@ -54,7 +50,7 @@ resource "huaweicloud_compute_instance" "test_web" {
 
 # Associate EIP with test instance
 resource "huaweicloud_compute_eip_associate" "test_web" {
-  count = 1  # Set to 0 when using auto-scaling
+  count = 0  # Set to 1 to enable
 
   public_ip   = huaweicloud_vpc_eip.test_instance[count.index].address
   instance_id = huaweicloud_compute_instance.test_web[count.index].id
