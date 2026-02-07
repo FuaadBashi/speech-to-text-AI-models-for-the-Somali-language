@@ -63,10 +63,10 @@ resource "huaweicloud_vpc_eip" "nat" {
 }
 
 resource "huaweicloud_nat_gateway" "main" {
-  name                = "${var.project_name}-${var.environment}-nat"
-  spec                = "1"
-  vpc_id              = huaweicloud_vpc.main.id
-  subnet_id           = huaweicloud_vpc_subnet.public.id
+  name                  = "${var.project_name}-${var.environment}-nat"
+  spec                  = "1"
+  vpc_id                = huaweicloud_vpc.main.id
+  subnet_id             = huaweicloud_vpc_subnet.public.id
   enterprise_project_id = "0"
 
   tags = {

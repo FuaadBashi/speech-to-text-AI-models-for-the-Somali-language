@@ -4,7 +4,7 @@
 
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     huaweicloud = {
       source  = "huaweicloud/huaweicloud"
@@ -20,14 +20,14 @@ provider "huaweicloud" {
   # Credentials
   access_key = var.access_key
   secret_key = var.secret_key
-  
+
   # CRITICAL: Use a generic region name that won't trigger domain lookups
   # The actual region routing is handled by the endpoints
-  region = "cn-north-1"  # ✅ CORRECT  # Dummy region, endpoints override this
-  
+  region = "cn-north-1" # ✅ CORRECT  # Dummy region, endpoints override this
+
   # Allow insecure connections
   insecure = true
-  
+
   # HTG Cloud Endpoints - These override the default region-based URLs
   endpoints = {
     iam   = "https://iam-apigateway-proxy.htgcloud-region-02.htgclouds.com:443"

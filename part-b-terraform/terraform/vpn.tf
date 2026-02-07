@@ -61,12 +61,12 @@ resource "huaweicloud_vpc_eip" "vpn" {
 
 # VPN/Bastion Instance
 resource "huaweicloud_compute_instance" "vpn" {
-  name              = "${var.project_name}-${var.environment}-vpn"
-  image_id          = local.ubuntu_image_id  # FIXED: Changed from data source
-  flavor_id         = "s6.small.1"  # Small instance is sufficient
-  key_pair          = var.key_pair_name
+  name               = "${var.project_name}-${var.environment}-vpn"
+  image_id           = local.ubuntu_image_id # FIXED: Changed from data source
+  flavor_id          = "s6.small.1"          # Small instance is sufficient
+  key_pair           = var.key_pair_name
   security_group_ids = [huaweicloud_networking_secgroup.vpn.id]
-  availability_zone = var.availability_zone
+  availability_zone  = var.availability_zone
 
   network {
     uuid = huaweicloud_vpc_subnet.public.id

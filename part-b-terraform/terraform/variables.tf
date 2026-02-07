@@ -70,7 +70,7 @@ variable "private_subnet_cidr" {
 variable "admin_cidr" {
   description = "CIDR block for admin SSH access (your public IP)"
   type        = string
-  default     = "0.0.0.0/0"  # Override in terraform.tfvars with your specific IP
+  default     = "0.0.0.0/0" # Override in terraform.tfvars with your specific IP
 }
 
 # ============================================

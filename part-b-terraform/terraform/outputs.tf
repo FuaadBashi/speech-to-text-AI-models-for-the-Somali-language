@@ -101,9 +101,9 @@ output "db_security_group_id" {
 
 # Quick Access Instructions
 output "quick_start_instructions" {
-  sensitive = true
+  sensitive   = true
   description = "Quick start instructions"
-  value = <<-EOT
+  value       = <<-EOT
   
   ========================================
   DEPLOYMENT SUCCESSFUL!

@@ -1,7 +1,7 @@
 # Elastic Load Balancer
 resource "huaweicloud_elb_loadbalancer" "main" {
   name              = "${var.project_name}-${var.environment}-elb"
-  availability_zone = ["region-02a"] 
+  availability_zone = ["region-02a"]
   vpc_id            = huaweicloud_vpc.main.id
   ipv4_subnet_id    = huaweicloud_vpc_subnet.public.ipv4_subnet_id
   cross_vpc_backend = false
@@ -55,10 +55,10 @@ resource "huaweicloud_elb_listener" "http" {
 
 # Backend Server Group
 resource "huaweicloud_elb_pool" "main" {
-  name            = "${var.project_name}-${var.environment}-pool"
-  protocol        = "HTTP"
-  lb_method       = "ROUND_ROBIN"
-  listener_id     = huaweicloud_elb_listener.http.id
+  name        = "${var.project_name}-${var.environment}-pool"
+  protocol    = "HTTP"
+  lb_method   = "ROUND_ROBIN"
+  listener_id = huaweicloud_elb_listener.http.id
 
   # Persistence settings (optional)
   persistence {

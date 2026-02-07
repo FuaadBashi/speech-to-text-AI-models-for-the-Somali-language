@@ -6,7 +6,7 @@ locals {
 
 # EIP for test instance (disabled by default)
 resource "huaweicloud_vpc_eip" "test_instance" {
-  count = 0  # Set to 1 to enable test instance
+  count = 0 # Set to 1 to enable test instance
 
   publicip {
     type = "5_bgp"
@@ -26,7 +26,7 @@ resource "huaweicloud_vpc_eip" "test_instance" {
 
 # Test ECS Instance (disabled by default)
 resource "huaweicloud_compute_instance" "test_web" {
-  count = 0  # Set to 1 to enable test instance
+  count = 0 # Set to 1 to enable test instance
 
   name               = "${var.project_name}-${var.environment}-test-web-${count.index + 1}"
   image_id           = local.ubuntu_image_id
@@ -50,7 +50,7 @@ resource "huaweicloud_compute_instance" "test_web" {
 
 # Associate EIP with test instance
 resource "huaweicloud_compute_eip_associate" "test_web" {
-  count = 0  # Set to 1 to enable
+  count = 0 # Set to 1 to enable
 
   public_ip   = huaweicloud_vpc_eip.test_instance[count.index].address
   instance_id = huaweicloud_compute_instance.test_web[count.index].id

@@ -4,10 +4,10 @@
 resource "huaweicloud_as_configuration" "main" {
   scaling_configuration_name = "${var.project_name}-${var.environment}-asg-config"
   instance_config {
-    image    = local.ubuntu_image_id  # FIXED: Changed from data source
+    image    = local.ubuntu_image_id # FIXED: Changed from data source
     flavor   = var.instance_flavor
     key_name = var.key_pair_name
-    
+
     disk {
       size        = 40
       volume_type = "SATA"
@@ -25,25 +25,25 @@ resource "huaweicloud_as_configuration" "main" {
 resource "huaweicloud_as_group" "main" {
   scaling_group_name       = "${var.project_name}-${var.environment}-asg"
   scaling_configuration_id = huaweicloud_as_configuration.main.id
-  
-  min_instance_number = 2
-  max_instance_number = 4
+
+  min_instance_number    = 2
+  max_instance_number    = 4
   desire_instance_number = 2
-  
+
   vpc_id = huaweicloud_vpc.main.id
-  
+
   networks {
     id = huaweicloud_vpc_subnet.private.id
   }
-  
+
   lbaas_listeners {
     pool_id       = huaweicloud_elb_pool.main.id
     protocol_port = 80
   }
-  
+
   delete_instances = "yes"
   delete_publicip  = true
-  
+
   tags = {
     Environment = var.environment
     Name        = "${var.project_name}-${var.environment}-asg"
@@ -56,12 +56,12 @@ resource "huaweicloud_as_policy" "scale_up" {
   scaling_group_id    = huaweicloud_as_group.main.id
   scaling_policy_type = "ALARM"
   alarm_id            = huaweicloud_ces_alarmrule.cpu_high.id
-  
+
   scaling_policy_action {
     operation       = "ADD"
     instance_number = 1
   }
-  
+
   cool_down_time = 300
 }
 
@@ -71,12 +71,12 @@ resource "huaweicloud_as_policy" "scale_down" {
   scaling_group_id    = huaweicloud_as_group.main.id
   scaling_policy_type = "ALARM"
   alarm_id            = huaweicloud_ces_alarmrule.cpu_low.id
-  
+
   scaling_policy_action {
     operation       = "REMOVE"
     instance_number = 1
   }
-  
+
   cool_down_time = 300
 }
 
@@ -87,7 +87,7 @@ resource "huaweicloud_ces_alarmrule" "cpu_high" {
   alarm_enabled        = true
   alarm_level          = 2
   alarm_action_enabled = true
-  
+
   metric {
     namespace   = "SYS.AS"
     metric_name = "cpu_util"
@@ -96,7 +96,7 @@ resource "huaweicloud_ces_alarmrule" "cpu_high" {
       value = huaweicloud_as_group.main.id
     }
   }
-  
+
   condition {
     period              = 300
     filter              = "average"
@@ -114,7 +114,7 @@ resource "huaweicloud_ces_alarmrule" "cpu_low" {
   alarm_enabled        = true
   alarm_level          = 2
   alarm_action_enabled = true
-  
+
   metric {
     namespace   = "SYS.AS"
     metric_name = "cpu_util"
@@ -123,7 +123,7 @@ resource "huaweicloud_ces_alarmrule" "cpu_low" {
       value = huaweicloud_as_group.main.id
     }
   }
-  
+
   condition {
     period              = 300
     filter              = "average"
