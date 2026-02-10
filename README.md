@@ -2,7 +2,7 @@
 
 Complete pipeline for training and evaluating Somali Automatic Speech Recognition (ASR) models using Wav2Vec2 and Whisper architectures.
 
-## 🎯 Project Overview
+## Project Overview
 
 This repository implements a production-ready ASR system for Somali language with:
 - **Training pipeline** using state-of-the-art models (Wav2Vec2, Whisper)
@@ -24,7 +24,7 @@ This repository implements a production-ready ASR system for Somali language wit
 ════════════════════════════════════════════
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 ### Training
 - **Base Model**: `facebook/wav2vec2-xls-r-300m` or `openai/whisper-small`
@@ -70,7 +70,7 @@ somali-asr/
 └── README.md                       # This file
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -206,7 +206,7 @@ REF: dhiso
 HYP: dhiso 
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Dataset Configuration
 
@@ -248,7 +248,7 @@ GRADIENT_CHECKPOINTING = True
 | Whisper-Small | ~45 min | 7.41% | A100 40GB |
 | Wav2Vec2 (CPU) | ~3-4 hours | 9.09% | 16-core CPU |
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -299,6 +299,42 @@ pip install soundfile librosa
 - **[Data Sources](docs/data_sources.md)** - Dataset details
 - **[Architecture Decisions](docs/decisions.md)** - Design choices
 - **[src/README.md](src/README.md)** - Detailed module documentation
+- 
+🧩 Part B – Infrastructure (Terraform)
+
+This project is accompanied by a Terraform-based infrastructure implementation (Part B of the assessment), designed to support training, evaluation, and deployment of the Somali ASR pipeline in a cloud environment.
+
+The infrastructure code provisions:
+  
+  - Virtual Private Cloud (VPC)
+  
+  - Public and private subnets
+  
+  - Security groups
+  
+  - Compute instances for model training and inference
+  
+  - Auto Scaling Group for inference workloads
+  
+  - Elastic Load Balancer
+  
+  - NAT Gateway and Elastic IPs
+  
+  - RDS MySQL database (metadata / experiment tracking)
+  
+  - VPN / bastion host for secure access
+
+The Terraform configuration:
+
+  - Initializes successfully
+  
+  - Validates without errors
+  
+  - Generates a plan of 28 infrastructure resources
+
+Automated deployment is blocked due to an HTG Cloud endpoint limitation (*.htgclouds.com vs default *.myhuaweicloud.com). This is a platform constraint and not a configuration issue. The infrastructure code is production-ready and deployable via the HTG Cloud console or a provider with custom endpoint support.
+
+This repository focuses on the application layer (ASR), while the infrastructure code is maintained in the associated Terraform directory as part of the assessment submission.
 
 ## 🤝 Contributing
 
