@@ -69,7 +69,7 @@ output "database_port" {
 
 output "database_name" {
   description = "Database name"
-  value       = huaweicloud_rds_database.app_db.name
+  value       = huaweicloud_rds_mysql_database.app_db.name
 }
 
 # Auto Scaling Outputs
@@ -121,7 +121,7 @@ output "quick_start_instructions" {
   4. Database connection:
      Host: ${huaweicloud_rds_instance.main.private_ips[0]}
      Port: 3306
-     Database: ${huaweicloud_rds_database.app_db.name}
+     Database: ${huaweicloud_rds_mysql_database.app_db.name}
      Username: ${var.db_username}
   
   5. Auto-scaling is configured:

@@ -15,13 +15,8 @@ resource "huaweicloud_vpc_eip" "test_instance" {
     name        = "${var.project_name}-${var.environment}-test-eip-${count.index + 1}"
     size        = 5
     share_type  = "PER"
-    charge_mode = "traffic"
   }
 
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-test-eip-${count.index + 1}"
-    Environment = var.environment
-  }
 }
 
 # Test ECS Instance (disabled by default)
@@ -41,11 +36,6 @@ resource "huaweicloud_compute_instance" "test_web" {
 
   user_data = file("${path.module}/user-data.sh")
 
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-test-web-${count.index + 1}"
-    Environment = var.environment
-    Role        = "web-server"
-  }
 }
 
 # Associate EIP with test instance

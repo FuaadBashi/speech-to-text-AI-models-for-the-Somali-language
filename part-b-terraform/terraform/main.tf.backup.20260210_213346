@@ -1,0 +1,21 @@
+terraform {
+  required_version = ">= 1.0"
+
+  required_providers {
+    hcs = {
+      source  = "huaweicloud/hcs"
+      version = "~> 2.4.0"
+    }
+  }
+}
+
+provider "hcs" {
+  access_key = var.access_key
+  secret_key = var.secret_key
+  region     = var.region
+
+  auth_url    = "https://iam-apigateway-proxy.htgcloud-region-02.htgclouds.com/v3"
+  domain_name = "htgcloud-region-02"
+
+  insecure = true
+}

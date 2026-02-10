@@ -219,3 +219,47 @@ variable "tags" {
     Project   = "Somali-ASR"
   }
 }
+
+# Auto-scaling instance count variables
+variable "min_instances" {
+  description = "Minimum number of instances in auto-scaling group"
+  type        = number
+  default     = 1
+}
+
+variable "max_instances" {
+  description = "Maximum number of instances in auto-scaling group"
+  type        = number
+  default     = 5
+}
+
+variable "desired_instances" {
+  description = "Desired number of instances in auto-scaling group"
+  type        = number
+  default     = 2
+}
+
+# HTG Cloud authentication variables
+variable "user_name" {
+  description = "HTG Cloud username"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "password" {
+  description = "HTG Cloud password"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+# ============================================
+# HTG Cloud Authentication
+# ============================================
+
+variable "auth_url" {
+  description = "HTG Cloud authentication URL"
+  type        = string
+  default     = "https://iam-apigateway-proxy.htgcloud-region-02.htgclouds.com/v3"
+}

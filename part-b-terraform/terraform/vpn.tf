@@ -50,13 +50,8 @@ resource "huaweicloud_vpc_eip" "vpn" {
     name        = "${var.project_name}-${var.environment}-vpn-eip"
     size        = 5
     share_type  = "PER"
-    charge_mode = "traffic"
   }
 
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-vpn-eip"
-    Environment = var.environment
-  }
 }
 
 # VPN/Bastion Instance
@@ -107,11 +102,6 @@ resource "huaweicloud_compute_instance" "vpn" {
     echo "VPN server setup complete at $(date)" > /var/log/vpn-setup.log
   EOF
 
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-vpn"
-    Environment = var.environment
-    Role        = "vpn-bastion"
-  }
 }
 
 # Associate EIP with VPN instance

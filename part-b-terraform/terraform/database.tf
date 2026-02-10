@@ -31,27 +31,27 @@ resource "huaweicloud_rds_instance" "main" {
 }
 
 # Database
-resource "huaweicloud_rds_database" "app_db" {
+resource "huaweicloud_rds_mysql_database" "app_db" {
   instance_id   = huaweicloud_rds_instance.main.id
   name          = "somali_asr_db"
   character_set = "utf8mb4"
 }
 
 # Database User (optional - for application access)
-resource "huaweicloud_rds_account" "app_user" {
-  instance_id = huaweicloud_rds_instance.main.id
-  name        = "app_user"
-  password    = var.db_password
-
-  depends_on = [huaweicloud_rds_database.app_db]
-}
+# resource "huaweicloud_rds_account" "app_user" {
+#   instance_id = huaweicloud_rds_instance.main.id
+#   name        = "app_user"
+#   password    = var.db_password
+# 
+#   depends_on = [huaweicloud_rds_mysql_database.app_db]
+# }
 
 # Grant privileges to app user
-resource "huaweicloud_rds_database_privilege" "app_user_privilege" {
-  instance_id = huaweicloud_rds_instance.main.id
-  db_name     = huaweicloud_rds_database.app_db.name
-  users {
-    name     = huaweicloud_rds_account.app_user.name
-    readonly = false
-  }
-}
+# resource "huaweicloud_rds_mysql_database_privilege" "app_user_privilege" {
+#   instance_id = huaweicloud_rds_instance.main.id
+#   db_name     = huaweicloud_rds_mysql_database.app_db.name
+#   users {
+#     name     = huaweicloud_rds_account.app_user.name
+#     readonly = false
+#   }
+# }
