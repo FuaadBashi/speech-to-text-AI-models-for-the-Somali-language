@@ -1,7 +1,7 @@
-# Update system
+
 yum update -y
 
-# Install Apache
+
 yum install -y httpd php
 
 # Create simple PHP application showing instance metadata
@@ -34,7 +34,6 @@ cat > /var/www/html/index.php << 'PHPEOF'
 </html>
 PHPEOF
 
-# Start and enable Apache
 systemctl start httpd
 systemctl enable httpd
 
