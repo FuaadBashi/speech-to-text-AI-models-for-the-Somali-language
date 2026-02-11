@@ -1,12 +1,11 @@
-# Use a common Ubuntu 22.04 image ID for HTG Cloud
-locals {
-  # This will be replaced with actual image ID from console
-  ubuntu_image_id = "REPLACE_WITH_ACTUAL_IMAGE_ID"
+
+locals { 
+  ubuntu_image_id = "bb050e32-4c21-433a-ba73-9d32bef446e9"
 }
 
-# EIP for test instance (disabled by default)
+
 resource "huaweicloud_vpc_eip" "test_instance" {
-  count = 0 # Set to 1 to enable test instance
+  count = 0 
 
   publicip {
     type = "5_bgp"
@@ -21,7 +20,7 @@ resource "huaweicloud_vpc_eip" "test_instance" {
 
 # Test ECS Instance (disabled by default)
 resource "huaweicloud_compute_instance" "test_web" {
-  count = 0 # Set to 1 to enable test instance
+  count = 0 
 
   name               = "${var.project_name}-${var.environment}-test-web-${count.index + 1}"
   image_id           = local.ubuntu_image_id
@@ -38,7 +37,6 @@ resource "huaweicloud_compute_instance" "test_web" {
 
 }
 
-# Associate EIP with test instance
 resource "huaweicloud_compute_eip_associate" "test_web" {
   count = 0 # Set to 1 to enable
 
