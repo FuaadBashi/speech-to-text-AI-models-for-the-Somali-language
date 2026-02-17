@@ -1,265 +1,123 @@
-# ============================================
-# COMPLETE VARIABLES FILE FOR TERRAFORM
-# ============================================
-# HTG Cloud Infrastructure Variables
-# Project: Somali ASR AI DevOps Assessment
-
-# ============================================
-# Huawei Cloud Provider Variables
-# ============================================
-variable "access_key" {
-  description = "Huawei Cloud Access Key"
-  type        = string
-  sensitive   = true
-}
-
-variable "secret_key" {
-  description = "Huawei Cloud Secret Key"
-  type        = string
-  sensitive   = true
-}
-
-variable "region" {
-  description = "Huawei Cloud region"
-  type        = string
-  default     = "Mogadishu-region-hq3"
-}
-
-variable "availability_zone" {
-  description = "Availability zone within the region"
-  type        = string
-  default     = "Mogadishu-region-hq3a"
-}
-
+# Project Configuration
 variable "project_name" {
-  description = "Project name for resources"
+  description = "Project name in HTG Cloud"
   type        = string
-  default     = "somali-asr"
+  default     = "htgcloud-region-02"
 }
 
 variable "environment" {
-  description = "Environment name (dev, staging, prod)"
+  description = "Environment name"
   type        = string
-  default     = "prod"
+  default     = "production"
 }
 
-# ============================================
-# Network Variables
-# ============================================
+# HTG Cloud Credentials
+variable "access_key" {
+  description = "HTG Cloud Access Key"
+  type        = string
+  default     = "DHAWLD4BCTYRLU61VB4R"
+}
+
+variable "secret_key" {
+  description = "HTG Cloud Secret Key"
+  type        = string
+  sensitive   = true
+  default     = "ND2Xv3V8XIPoJ0Mfdfe3cHAMuC6o9IBZm142JbX6"
+}
+
+# Network Configuration
 variable "vpc_cidr" {
-  description = "CIDR block for the VPC"
+  description = "VPC CIDR block"
   type        = string
   default     = "10.0.0.0/16"
 }
 
 variable "public_subnet_cidr" {
-  description = "CIDR block for the public subnet"
+  description = "Public subnet CIDR block"
   type        = string
   default     = "10.0.1.0/24"
 }
 
 variable "private_subnet_cidr" {
-  description = "CIDR block for the private subnet"
+  description = "Private subnet CIDR block"
   type        = string
   default     = "10.0.2.0/24"
 }
 
-# ============================================
-# Security Variables
-# ============================================
-variable "admin_cidr" {
-  description = "CIDR block for admin SSH access (your public IP)"
+variable "availability_zone" {
+  description = "Availability zone"
   type        = string
-  default     = "0.0.0.0/0" # Override in terraform.tfvars with your specific IP
+  default     = "region-02a"
 }
 
-# ============================================
-# Compute Instance Variables
-# ============================================
+# Compute Configuration
 variable "instance_flavor" {
-  description = "Flavor ID for compute instances"
+  description = "Instance flavor/type"
   type        = string
-  default     = "s6.large.2"
+  default     = "s3.large.2"
 }
 
-variable "image_id" {
-  description = "Image ID for compute instances (get from HTG Cloud console)"
+variable "instance_image" {
+  description = "Image ID for compute instances"
   type        = string
-  # Must be provided in terraform.tfvars
+  default     = "Ubuntu 22.04 server 64bit"
 }
 
 variable "key_pair_name" {
-  description = "Name of the SSH key pair"
+  description = "SSH key pair name"
   type        = string
-  default     = "htg-fuaad-key"
+  default     = "htg-devops-key"
 }
 
-# ============================================
-# Database Variables
-# ============================================
-variable "db_username" {
-  description = "Master username for RDS database"
+# Database Configuration
+variable "db_flavor" {
+  description = "RDS instance flavor"
   type        = string
-  default     = "admin"
+  default     = "rds.mysql.s1.medium"
+}
+
+variable "db_name" {
+  description = "Database name"
+  type        = string
+  default     = "appdb"
+}
+
+variable "db_username" {
+  description = "Database username"
+  type        = string
+  default     = "dbadmin"
   sensitive   = true
 }
 
 variable "db_password" {
-  description = "Master password for RDS database"
+  description = "Database password"
   type        = string
-  sensitive   = true
-  # Must be provided in terraform.tfvars
-}
-
-variable "db_name" {
-  description = "Name of the database to create"
-  type        = string
-  default     = "somali_asr_db"
-}
-
-variable "db_engine_version" {
-  description = "Database engine version"
-  type        = string
-  default     = "8.0"
-}
-
-variable "db_instance_class" {
-  description = "RDS instance class"
-  type        = string
-  default     = "rds.mysql.s1.large"
-}
-
-variable "db_storage_size" {
-  description = "Database storage size in GB"
-  type        = number
-  default     = 40
-}
-
-# ============================================
-# Auto Scaling Variables
-# ============================================
-variable "asg_min_size" {
-  description = "Minimum number of instances in the Auto Scaling Group"
-  type        = number
-  default     = 2
-}
-
-variable "asg_max_size" {
-  description = "Maximum number of instances in the Auto Scaling Group"
-  type        = number
-  default     = 10
-}
-
-variable "asg_desired_capacity" {
-  description = "Desired number of instances in the Auto Scaling Group"
-  type        = number
-  default     = 2
-}
-
-variable "scale_up_threshold" {
-  description = "CPU threshold percentage to trigger scale up"
-  type        = number
-  default     = 70
-}
-
-variable "scale_down_threshold" {
-  description = "CPU threshold percentage to trigger scale down"
-  type        = number
-  default     = 30
-}
-
-# ============================================
-# VPN Variables
-# ============================================
-variable "vpn_instance_flavor" {
-  description = "Flavor for VPN instance"
-  type        = string
-  default     = "s6.small.1"
-}
-
-variable "vpn_user" {
-  description = "OpenVPN username"
-  type        = string
-  default     = "vpnuser"
-}
-
-variable "vpn_password" {
-  description = "OpenVPN password"
-  type        = string
-  sensitive   = true
-  # Must be provided in terraform.tfvars
-}
-
-# ============================================
-# Load Balancer Variables
-# ============================================
-variable "lb_bandwidth" {
-  description = "Bandwidth for load balancer EIP in Mbps"
-  type        = number
-  default     = 5
-}
-
-# ============================================
-# NAT Gateway Variables
-# ============================================
-variable "nat_bandwidth" {
-  description = "Bandwidth for NAT gateway EIP in Mbps"
-  type        = number
-  default     = 5
-}
-
-# ============================================
-# Tags
-# ============================================
-variable "tags" {
-  description = "Common tags to apply to all resources"
-  type        = map(string)
-  default = {
-    ManagedBy = "Terraform"
-    Project   = "Somali-ASR"
-  }
-}
-
-# Auto-scaling instance count variables
-variable "min_instances" {
-  description = "Minimum number of instances in auto-scaling group"
-  type        = number
-  default     = 1
-}
-
-variable "max_instances" {
-  description = "Maximum number of instances in auto-scaling group"
-  type        = number
-  default     = 5
-}
-
-variable "desired_instances" {
-  description = "Desired number of instances in auto-scaling group"
-  type        = number
-  default     = 2
-}
-
-# HTG Cloud authentication variables
-variable "user_name" {
-  description = "HTG Cloud username"
-  type        = string
-  default     = ""
+  default     = "DbPassword123!"
   sensitive   = true
 }
 
-variable "password" {
-  description = "HTG Cloud password"
+# Web Server Configuration
+variable "web_flavor" {
+  description = "Flavor for web servers"
   type        = string
-  default     = ""
-  sensitive   = true
+  default     = "s3.large.2"
 }
 
-# ============================================
-# HTG Cloud Authentication
-# ============================================
-
-variable "auth_url" {
-  description = "HTG Cloud authentication URL"
+variable "web_image_id" {
+  description = "Image ID for web servers"
   type        = string
-  default     = "https://iam-apigateway-proxy.htgcloud-region-02.htgclouds.com/v3"
+  default     = "Ubuntu 22.04 server 64bit"
+}
+
+# Bastion/VPN Configuration
+variable "bastion_flavor" {
+  description = "Flavor for bastion/VPN server"
+  type        = string
+  default     = "s3.medium.2"
+}
+
+variable "bastion_image_id" {
+  description = "Image ID for bastion server"
+  type        = string
+  default     = "Ubuntu 22.04 server 64bit"
 }

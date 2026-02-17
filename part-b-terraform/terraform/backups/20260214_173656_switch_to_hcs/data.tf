@@ -1,0 +1,13 @@
+# Availability zones
+data "huaweicloud_availability_zones" "available" {
+  state = "available"
+}
+
+# Compute flavors for autoscaling
+# Changed from huaweicloud_bms_flavors to huaweicloud_compute_flavors
+data "huaweicloud_compute_flavors" "main" {
+  availability_zone = "hq3_AZ1"
+  performance_type  = "normal"
+  cpu_core_count    = 2
+  memory_size       = 4
+}

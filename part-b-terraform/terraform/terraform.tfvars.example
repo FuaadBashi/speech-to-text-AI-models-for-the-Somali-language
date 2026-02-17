@@ -1,14 +1,10 @@
-# Copy this file to terraform.tfvars and fill in your actual values
-# DO NOT commit terraform.tfvars to version control!
+# HTG Cloud Credentials
 
-access_key      = "YOUR_HUAWEI_CLOUD_ACCESS_KEY"
-secret_key      = "YOUR_HUAWEI_CLOUD_SECRET_KEY"
-region          = "ap-southeast-1"
-key_pair_name   = "my-ssh-key"
-admin_cidr      = "YOUR_PUBLIC_IP/32"  # Replace with your actual public IP
-db_password     = "YourSecurePassword123!"
+access_key  = "YOUR_ACCESS_KEY_HERE"
+secret_key  = "YOUR_SECRET_KEY_HERE"
+db_password = "YOUR_DB_PASSWORD_HERE"
 
-# Optional overrides
-# project_name    = "somali-asr-infra"
-# environment     = "dev"
-# instance_flavor = "s6.small.1"
+# Optional: Image IDs from HTG Cloud console
+# Leave empty to skip bastion and autoscaling resources
+bastion_image_id = ""  # e.g., "abc123-image-id"
+web_image_id     = ""  # e.g., "def456-image-id"

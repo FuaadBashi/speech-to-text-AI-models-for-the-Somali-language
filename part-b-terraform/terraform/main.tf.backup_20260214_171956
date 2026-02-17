@@ -1,0 +1,39 @@
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    huaweicloud = {
+      source  = "huaweicloud/huaweicloud"
+      version = "~> 1.67.0"
+    }
+  }
+}
+
+provider "huaweicloud" {
+  region       = "Mogadishu-region-hq3h"
+  access_key   = "DHAWLD4BCTYRLU61VB4R"
+  secret_key   = "ND2Xv3V8XIPoJ0Mfdfe3cHAMuC6o9IBZm142JbX6"
+  
+  # HTG Cloud custom domain
+  cloud        = "htgclouds.com"
+  
+  # Disable SSL verification for private cloud
+  insecure     = true
+  
+  # Custom IAM endpoint for authentication
+  auth_url     = "https://iam.Mogadishu-region-hq3h.htgclouds.com/v3"
+  
+  # Custom service endpoints
+  endpoints = {
+    iam    = "https://iam.Mogadishu-region-hq3h.htgclouds.com"
+    ecs    = "https://ecs.Mogadishu-region-hq3h.htgclouds.com"
+    vpc    = "https://vpc.Mogadishu-region-hq3h.htgclouds.com"
+    evs    = "https://evs.Mogadishu-region-hq3h.htgclouds.com"
+    eip    = "https://eip.Mogadishu-region-hq3h.htgclouds.com"
+    elb    = "https://elb.Mogadishu-region-hq3h.htgclouds.com"
+    rds    = "https://rds.Mogadishu-region-hq3h.htgclouds.com"
+    nat    = "https://nat.Mogadishu-region-hq3h.htgclouds.com"
+    as     = "https://as.Mogadishu-region-hq3h.htgclouds.com"
+    ces    = "https://ces.Mogadishu-region-hq3h.htgclouds.com"
+    kms    = "https://kms.Mogadishu-region-hq3h.htgclouds.com"
+  }
+}
