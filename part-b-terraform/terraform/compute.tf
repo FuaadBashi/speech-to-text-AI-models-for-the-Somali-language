@@ -1,36 +1,32 @@
-# SSH Key Pair
 resource "hcs_ecs_compute_keypair" "main" {
-  name       = "${var.project_name}-${var.environment}-keypair"
-  public_key = file("~/.ssh/id_rsa.pub")
+  name       = "dev-keypair"
+  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDfbNFLSppZjLTXVQKFstHhsGBtG091Ldt6EUXvJliX6AuvdL11dUnhS0YUrLxviFuD4Fv0iQd765YCY8MOVKOJe54o/gsw8dq92KiNLdcnm4AVGmKE+NGF4rpuzQOd6LrM2uuTTa25M7A6QU0k6AIsqipS1lxU0koIuaqn6YDbvxJKh285MWIdATPFraIgFAvnosZA6sKC7Kb6krvSq3BXVf4Kt0+TnxBYMfgWHKCY2sxyKc6DeEJt6XovGm872Mn0P7hjWk5XEBLL4ohgDehgvQCq9og7KQndx4/jZDnnfupEntWJ2fMFDWOHf09dWDo8S8gLM6m0qm62pOBVxsUnQSvcx2O6go47hgfHc7cpluhpTsrp6cqQjRdZ8iOZtkrOI8wjerJPDQR21v7J7Y8+SvItw+L2fDCUb82nZyEDGL/ssiG9ZYoAmJdQ3BDXXJfW41P9lb7jjUicM8ytoFIFr8lWVzAXOdbOV8XU3ep5my8Myhroz0BN4ydHiy103iDr5gNWkiLl02MEpi0a1ompGj5CC46b40oKTE7XaXJ5mnLpWb1iILAAA0SpKdWRqao0FSJ5agZJto55zfzbhj2TmqHyXagHyNOq8qhAhbeg+3u+gWJijAkUFP+RZQRnat62NSboJwYl0/ilNxELWmGLXHMP0TxaL+FaQkrhiU/S4w== terraform-hcs"
 }
 
-# Bastion Host - Using variables for image and flavor
 resource "hcs_ecs_compute_instance" "bastion" {
-  name               = "${var.project_name}-${var.environment}-bastion"
-  image_id           = var.bastion_image_id
-  flavor_id          = var.bastion_flavor
-  security_group_ids = [hcs_networking_secgroup.bastion.id]
-  availability_zone  = var.availability_zone
-  key_pair           = hcs_ecs_compute_keypair.main.name
+  name              = "dev-bastion"
+  image_id          = "450d07fd-bf1a-407a-9063-ea829537859e"
+  flavor_id         = "S6_large.1"
+  key_pair          = hcs_ecs_compute_keypair.main.name
+  availability_zone = "az1.hq3"
 
   network {
     uuid = hcs_vpc_subnet.public.id
   }
+
+  security_group_ids = [hcs_networking_secgroup.bastion.id]
 }
 
-# EIP for Bastion - Removed unsupported charge_mode
-resource "hcs_vpc_eip" "bastion" {
-  publicip {
-    type = "5_bgp"
-  }
-  bandwidth {
-    name       = "${var.project_name}-${var.environment}-bastion-bandwidth"
-    size       = 5
-    share_type = "PER"
-  }
-}
+resource "hcs_ecs_compute_instance" "web" {
+  name              = "dev-web"
+  image_id          = "450d07fd-bf1a-407a-9063-ea829537859e"
+  flavor_id         = "S6_large.1"
+  key_pair          = hcs_ecs_compute_keypair.main.name
+  availability_zone = "az1.hq3"
 
-resource "hcs_ecs_compute_eip_associate" "bastion" {
-  public_ip   = hcs_vpc_eip.bastion.address
-  instance_id = hcs_ecs_compute_instance.bastion.id
+  network {
+    uuid = hcs_vpc_subnet.private.id
+  }
+
+  security_group_ids = [hcs_networking_secgroup.web.id]
 }

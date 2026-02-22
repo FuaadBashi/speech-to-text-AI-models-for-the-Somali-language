@@ -121,3 +121,9 @@ variable "bastion_image_id" {
   type        = string
   default     = "Ubuntu 22.04 server 64bit"
 }
+
+variable "region" {
+  description = "HTG Cloud region"
+  type        = string
+  default     = "region-02"
+}
