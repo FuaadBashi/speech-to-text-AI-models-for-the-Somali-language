@@ -2,8 +2,8 @@ terraform {
   required_version = ">= 1.5.0"
   required_providers {
     hcs = {
-      source  = "huaweicloud/hcs"
-      version = "~> 2.4.0"
+      source  = "local/huaweicloud/hcs"
+      version = "= 2.4.23"
     }
   }
 }
