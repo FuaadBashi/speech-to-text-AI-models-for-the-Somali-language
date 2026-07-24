@@ -1,4 +1,0 @@
-Bastion EIP Address: 
-Bastion EIP ID: 
-LB EIP Address: 
-LB EIP ID: 

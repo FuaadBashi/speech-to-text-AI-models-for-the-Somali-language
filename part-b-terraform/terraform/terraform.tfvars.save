@@ -1,6 +1,0 @@
-ç# HTG Cloud Credentials
-# Copy this file to terraform.tfvars and fill in your values
-
-access_key  = "YOUR_ACCESS_KEY_HERE"
-secret_key  = "YOUR_SECRET_KEY_HERE"
-db_password = "YOUR_DB_PASSWORD_HERE"
