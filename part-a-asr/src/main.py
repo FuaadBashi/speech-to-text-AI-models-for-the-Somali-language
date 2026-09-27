@@ -1,65 +1,47 @@
 #!/usr/bin/env python3
-"""
-Main script to run all notebook cells in order
-Converted from: LEGIT_Somali_ASR_Training_Complete.ipynb
-"""
+import argparse
+import os
+from pathlib import Path
 
-print("=" * 80)
-print("🎙️  SOMALI ASR TRAINING PIPELINE")
-print("=" * 80)
+STEPS = (
+    'setup_and_install.py',
+    'build_verification_clip.py',
+    'training_imports_and_config.py',
+    'training_configuration.py',
+    'training_run.py',
+    'evaluation_setup.py',
+    'evaluation_comprehensive.py',
+)
 
-# Step 1: Setup and Installation
-print("\n" + "=" * 80)
-print("STEP 1: Setup and Installation")
-print("=" * 80)
-exec(open('setup_and_install.py').read())
 
-# Step 2: Build Verification Clip
-print("\n" + "=" * 80)
-print("STEP 2: Build 5-Minute Verification Clip")
-print("=" * 80)
-exec(open('build_verification_clip.py').read())
+def run_pipeline(script_dir=None, steps=STEPS):
+    script_dir = Path(script_dir or Path(__file__).parent).resolve()
+    scripts = [script_dir / name for name in steps]
+    for script in scripts:
+        if not script.is_file():
+            raise FileNotFoundError(f'Pipeline step not found: {script}')
+    namespace = {'__name__': '__main__'}
+    original_dir = Path.cwd()
+    try:
+        os.chdir(script_dir)
+        for index, script in enumerate(scripts, 1):
+            print(f'[{index}/{len(scripts)}] {script.name}', flush=True)
+            namespace['__file__'] = str(script)
+            exec(compile(script.read_text(encoding='utf-8'), str(script), 'exec'), namespace)
+    finally:
+        os.chdir(original_dir)
+    return namespace
 
-# Step 3: Training - Imports and Config
-print("\n" + "=" * 80)
-print("STEP 3: Load Training Libraries and Configuration")
-print("=" * 80)
-exec(open('training_imports_and_config.py').read())
 
-# Step 4: Training Configuration
-print("\n" + "=" * 80)
-print("STEP 4: Set Training Parameters")
-print("=" * 80)
-exec(open('training_configuration.py').read())
+def main(argv=None):
+    parser = argparse.ArgumentParser(description='Run the Somali ASR notebook workflow')
+    parser.add_argument('--list-steps', action='store_true', help='Show steps without training or installing packages')
+    args = parser.parse_args(argv)
+    if args.list_steps:
+        print('\n'.join(STEPS))
+        return
+    run_pipeline()
 
-# Step 5: Run Training
-print("\n" + "=" * 80)
-print("STEP 5: Start Model Training")
-print("=" * 80)
-exec(open('training_run.py').read())
 
-# Step 6: Evaluation Setup
-print("\n" + "=" * 80)
-print("STEP 6: Setup Evaluation")
-print("=" * 80)
-exec(open('evaluation_setup.py').read())
-
-# Step 7: Comprehensive Evaluation
-print("\n" + "=" * 80)
-print("STEP 7: Run Comprehensive Evaluation")
-print("=" * 80)
-exec(open('evaluation_comprehensive.py').read())
-
-# Note: Skipping download scripts (Colab-specific)
-print("\n" + "=" * 80)
-print("ℹ️  Skipping download scripts (download_results.py, download_package.py)")
-print("   These are Google Colab-specific and not needed locally")
-print("=" * 80)
-
-print("\n" + "=" * 80)
-print("✅ TRAINING PIPELINE COMPLETE")
-print("=" * 80)
-print("\n📂 Check outputs/ folder for results:")
-print("  - outputs/final_model/          (trained model)")
-print("  - outputs/verification/         (evaluation results)")
-print("  - outputs/checkpoints/          (training checkpoints)")
+if __name__ == '__main__':
+    main()

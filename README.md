@@ -22,7 +22,7 @@ source .venv/bin/activate
 python -m pip install -r part-a-asr/requirements.txt
 ```
 
-Review the [training configuration](part-a-asr/src/training_configuration.py) and setup scripts before training. The workflow was converted from notebook cells, depends on external datasets/models, and can require a GPU and FFmpeg. Its entry point runs sibling scripts relative to the current working directory:
+Review the [training configuration](part-a-asr/src/training_configuration.py) and setup scripts before training. The workflow was converted from notebook cells, depends on external datasets/models, and can require a GPU and FFmpeg. The entry point resolves sibling scripts from its own directory and restores the caller’s working directory, including on failure. Preview the workflow with `python part-a-asr/src/main.py --list-steps`; this does not install packages or train a model:
 
 ```bash
 cd part-a-asr/src
