@@ -1,9 +1,10 @@
 import json
 import os
+
+import librosa
 import numpy as np
 import soundfile as sf
-import librosa
-from datasets import load_dataset, Audio
+from datasets import Audio, load_dataset
 from tqdm import tqdm
 from transformers.models.whisper.english_normalizer import BasicTextNormalizer
 
@@ -11,7 +12,7 @@ from transformers.models.whisper.english_normalizer import BasicTextNormalizer
 # CONFIGURATION
 # =============================================================================
 TARGET_SECONDS = 5 * 60  # 5 minutes total
-PAUSE_DURATION = 1.0     # 1 second silence between clips
+PAUSE_DURATION = 1.0  # 1 second silence between clips
 OUT_DIR = os.path.join("outputs", "verification")
 os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -22,18 +23,23 @@ OUT_SR = 16000
 # Text normalization (match training)
 try:
     normalizer = BasicTextNormalizer()
+
     def normalize_text(text):
         return normalizer(text)
+
     print("✓ Using BasicTextNormalizer")
-except:
+except ImportError:
     import re
+
     def normalize_text(text):
         text = text.lower().strip()
-        text = re.sub(r"[""\"'`´']", "", text)
+        text = re.sub(r"[" "\"'`´']", "", text)
         text = re.sub(r"[^a-z0-9\s\-]", " ", text)
         text = re.sub(r"\s+", " ", text).strip()
         return text
+
     print("✓ Using fallback normalizer")
+
 
 # =============================================================================
 # BUILD VERIFICATION CLIP
@@ -43,9 +49,9 @@ def build_verification_clip():
     Build 5-minute WAV by concatenating dataset clips with silence pauses.
     Save manifest with per-segment boundaries.
     """
-    print("="*80)
+    print("=" * 80)
     print("BUILDING 5-MINUTE VERIFICATION CLIP")
-    print("="*80)
+    print("=" * 80)
 
     # Load dataset WITHOUT auto-decoding (avoids torchcodec issues)
     print("\n📥 Loading dataset...")
@@ -83,6 +89,7 @@ def build_verification_clip():
             # Try bytes
             elif "bytes" in audio_data and audio_data["bytes"]:
                 import io
+
                 audio, sr = sf.read(io.BytesIO(audio_data["bytes"]))
             # Try array
             elif "array" in audio_data:
@@ -130,7 +137,7 @@ def build_verification_clip():
             silence = np.zeros(int(PAUSE_DURATION * OUT_SR), dtype=np.float32)
             audio_segments.append(silence)
 
-            current_time += (duration + PAUSE_DURATION)
+            current_time += duration + PAUSE_DURATION
             total_words_raw += len(text_raw.split())
             total_words_norm += len(text_norm.split())
 
@@ -152,12 +159,12 @@ def build_verification_clip():
     full_audio = np.concatenate(audio_segments)
 
     # Save WAV
-    print(f"💾 Saving WAV file...")
+    print("💾 Saving WAV file...")
     sf.write(OUT_WAV, full_audio, OUT_SR)
     actual_duration = len(full_audio) / OUT_SR
 
     # Save manifest
-    print(f"💾 Saving manifest...")
+    print("💾 Saving manifest...")
     manifest_data = {
         "total_duration_sec": round(actual_duration, 2),
         "num_segments": len(manifest),
@@ -169,31 +176,32 @@ def build_verification_clip():
         "split": "validation",
         "text_field": "transcription",
         "normalization": "BasicTextNormalizer",
-        "segments": manifest
+        "segments": manifest,
     }
 
     with open(OUT_MANIFEST, "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2, ensure_ascii=False)
 
     # Summary
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ VERIFICATION CLIP CREATED")
-    print("="*80)
+    print("=" * 80)
     print(f"Audio file: {OUT_WAV}")
-    print(f"  Duration: {actual_duration:.1f}s ({actual_duration/60:.1f} minutes)")
+    print(f"  Duration: {actual_duration:.1f}s ({actual_duration / 60:.1f} minutes)")
     print(f"  Sample rate: {OUT_SR} Hz")
     print(f"  Size: {os.path.getsize(OUT_WAV) / 1024**2:.1f} MB")
     print(f"\nManifest: {OUT_MANIFEST}")
     print(f"  Segments: {len(manifest)}")
     print(f"  Words (raw): {total_words_raw}")
     print(f"  Words (normalized): {total_words_norm}")
-    print(f"\n📊 Average per segment:")
-    print(f"  Duration: {actual_duration/len(manifest):.1f}s")
-    print(f"  Words: {total_words_norm/len(manifest):.1f}")
-    print("="*80)
+    print("\n📊 Average per segment:")
+    print(f"  Duration: {actual_duration / len(manifest):.1f}s")
+    print(f"  Words: {total_words_norm / len(manifest):.1f}")
+    print("=" * 80)
 
     # Verify alignment (spot check)
     verify_alignment()
+
 
 def verify_alignment():
     """Spot check: verify manifest timestamps match audio."""
@@ -224,6 +232,7 @@ def verify_alignment():
         print("✅ ALIGNMENT VERIFIED")
     else:
         print("⚠️  ALIGNMENT MISMATCH")
+
 
 # Run the builder
 build_verification_clip()

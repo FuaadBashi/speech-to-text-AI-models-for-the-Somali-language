@@ -1,0 +1,11 @@
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+  "E501",  # long lines in notebook-derived training code
+  # part-a-asr/src/main.py runs every step in one shared namespace, like notebook cells, so later
+  # steps legitimately use names defined by earlier ones.
+  "F821",
+]

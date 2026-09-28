@@ -1,25 +1,10 @@
+# Local provider cache and state: machine-specific, and state can contain secrets.
+.terraform/
+*.tfstate
+*.tfstate.*
 
-# Terraform credentials
+# Credentials
 terraform.tfvars
 *.tfvars
 !terraform.tfvars.example
 *.backup.*
-
-# Terraform credentials
-terraform.tfvars
-*.tfvars
-!terraform.tfvars.example
-*.backup.*
-
-# Terraform credentials
-terraform.tfvars
-*.tfvars
-!terraform.tfvars.example
-*.backup.*
-
-# Terraform credentials
-terraform.tfvars
-*.tfvars
-!terraform.tfvars.example
-*.backup.*
-main.tf
