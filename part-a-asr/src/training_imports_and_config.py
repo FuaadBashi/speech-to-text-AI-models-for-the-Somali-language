@@ -1,15 +1,14 @@
-import torch
-import evaluate
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, List
-from datasets import load_dataset, Audio
+
+import evaluate
+import torch
+from datasets import Audio, load_dataset
 from transformers import (
     WhisperForConditionalGeneration,
     WhisperProcessor,
-    Seq2SeqTrainer,
-    Seq2SeqTrainingArguments,
-    set_seed
+    set_seed,
 )
 
 # Configuration
@@ -20,25 +19,28 @@ LANGUAGE = "somali"
 
 set_seed(42)
 
-print("="*80)
+print("=" * 80)
 print("🤖 TRAINING SETUP (FAST MODE)")
-print("="*80)
+print("=" * 80)
 print(f"Model: {MODEL_ID}")
 print(f"Dataset: {DATASET_NAME}")
 print(f"Language: {LANGUAGE}")
-print(f"Target: <1 hour training")
-print("="*80)
+print("Target: <1 hour training")
+print("=" * 80)
+
 
 # Text normalization function
 def normalize_text(text: str) -> str:
     """Strict normalization for WER calculation"""
     text = text.lower()
-    text = re.sub(r'[^\w\s]', '', text)
-    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r"[^\w\s]", "", text)
+    text = re.sub(r"\s+", " ", text)
     return text.strip()
+
 
 # Metrics computation
 wer_metric = evaluate.load("wer")
+
 
 def compute_metrics(pred, processor):
     pred_ids = pred.predictions
@@ -53,11 +55,12 @@ def compute_metrics(pred, processor):
 
     # Normalize
     pred_str_norm = [normalize_text(p) for p in pred_str]
-    label_str_norm = [normalize_text(l) for l in label_str]
+    label_str_norm = [normalize_text(label) for label in label_str]
 
     # Calculate WER
     wer = wer_metric.compute(predictions=pred_str_norm, references=label_str_norm)
     return {"wer": wer}
+
 
 # Data collator
 @dataclass
@@ -83,13 +86,16 @@ class DataCollatorSpeechSeq2SeqWithPadding:
         batch["labels"] = labels
         return batch
 
+
 # Load processor and model
 print("\n📦 Loading processor and model...")
 processor = WhisperProcessor.from_pretrained(MODEL_ID, language=LANGUAGE, task="transcribe")
 model = WhisperForConditionalGeneration.from_pretrained(MODEL_ID)
 
 # Configure for Somali
-model.config.forced_decoder_ids = processor.get_decoder_prompt_ids(language=LANGUAGE, task="transcribe")
+model.config.forced_decoder_ids = processor.get_decoder_prompt_ids(
+    language=LANGUAGE, task="transcribe"
+)
 model.config.suppress_tokens = []
 model.config.use_cache = False
 
@@ -104,29 +110,24 @@ dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
 print(f"✓ Train samples: {len(dataset['train'])}")
 print(f"✓ Validation samples: {len(dataset['validation'])}")
 
+
 def prepare_dataset(batch):
     """Prepare audio features and labels"""
     audio = batch["audio"]
 
     # Extract audio features
     batch["input_features"] = processor.feature_extractor(
-        audio["array"],
-        sampling_rate=16000
+        audio["array"], sampling_rate=16000
     ).input_features[0]
 
     # Tokenize transcription
-    batch["labels"] = processor.tokenizer(
-        batch["transcription"].lower().strip()
-    ).input_ids
+    batch["labels"] = processor.tokenizer(batch["transcription"].lower().strip()).input_ids
 
     return batch
 
+
 print("\n🔄 Preprocessing dataset...")
-dataset = dataset.map(
-    prepare_dataset,
-    remove_columns=dataset["train"].column_names,
-    num_proc=4
-)
+dataset = dataset.map(prepare_dataset, remove_columns=dataset["train"].column_names, num_proc=4)
 
 print("✓ Dataset preprocessed")
 print("\n✅ Training setup complete!")

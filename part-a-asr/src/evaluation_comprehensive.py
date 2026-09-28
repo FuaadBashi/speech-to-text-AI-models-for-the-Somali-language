@@ -5,17 +5,18 @@ SIMPLE EVALUATION - Uses outputs/final_model directly
 
 import json
 import os
-import torch
+
 import librosa
 import numpy as np
-from transformers import WhisperForConditionalGeneration, WhisperProcessor
-from transformers.models.whisper.english_normalizer import BasicTextNormalizer
+import torch
 from jiwer import wer
 from tqdm import tqdm
+from transformers import WhisperForConditionalGeneration, WhisperProcessor
+from transformers.models.whisper.english_normalizer import BasicTextNormalizer
 
-print("="*80)
+print("=" * 80)
 print("VERIFICATION EVALUATION - USING FINAL MODEL")
-print("="*80)
+print("=" * 80)
 
 # Configuration
 MODEL_PATH = "outputs/final_model"  # Use final model directly
@@ -24,8 +25,11 @@ MANIFEST_PATH = "outputs/verification/verification_manifest.json"
 
 # Text normalization
 normalizer = BasicTextNormalizer()
+
+
 def normalize(text):
     return normalizer(text)
+
 
 # =============================================================================
 # LOAD MODEL
@@ -52,9 +56,9 @@ print(f"✓ Model on: {device}")
 # =============================================================================
 # LOAD AUDIO
 # =============================================================================
-print(f"\n📥 Loading audio...")
+print("\n📥 Loading audio...")
 full_audio, sr = librosa.load(WAV_PATH, sr=16000)
-print(f"✓ Loaded {len(full_audio)/sr:.1f}s")
+print(f"✓ Loaded {len(full_audio) / sr:.1f}s")
 
 with open(MANIFEST_PATH, "r") as f:
     manifest_data = json.load(f)
@@ -115,7 +119,7 @@ print(f"\n⚠️  Skipped {skipped} silent segments")
 # =============================================================================
 # COMPUTE WER
 # =============================================================================
-print(f"\n📊 Computing WER...")
+print("\n📊 Computing WER...")
 
 valid_pairs = [(p, r) for p, r in zip(predictions, references) if r]
 predictions_valid = [p for p, r in valid_pairs]
@@ -124,46 +128,48 @@ references_valid = [r for p, r in valid_pairs]
 full_pred = " ".join(predictions_valid)
 full_ref = " ".join(references_valid)
 
-wer_full = wer(full_ref, full_pred) if full_ref else float('inf')
+wer_full = wer(full_ref, full_pred) if full_ref else float("inf")
 
 segment_wers = []
 for pred, ref in zip(predictions_valid, references_valid):
     if ref and pred:
         try:
             segment_wers.append(wer(ref, pred))
-        except:
+        except ValueError:  # jiwer rejects empty references
             pass
 
-wer_avg = np.mean(segment_wers) if segment_wers else float('inf')
+wer_avg = np.mean(segment_wers) if segment_wers else float("inf")
 
 # =============================================================================
 # RESULTS
 # =============================================================================
-print(f"\n{'='*80}")
+print(f"\n{'=' * 80}")
 print("RESULTS")
-print("="*80)
+print("=" * 80)
 print(f"Model: {MODEL_PATH}")
 print(f"\nSegments: {len(valid_pairs)}/{len(segments)} (skipped {skipped})")
-print(f"Words: {len(full_pred.split())}/{len(full_ref.split())} ({len(full_pred.split())/len(full_ref.split())*100:.1f}% coverage)")
-print(f"\nWER (full): {wer_full*100:.2f}%")
-print(f"WER (avg):  {wer_avg*100:.2f}%")
-print("="*80)
+print(
+    f"Words: {len(full_pred.split())}/{len(full_ref.split())} ({len(full_pred.split()) / len(full_ref.split()) * 100:.1f}% coverage)"
+)
+print(f"\nWER (full): {wer_full * 100:.2f}%")
+print(f"WER (avg):  {wer_avg * 100:.2f}%")
+print("=" * 80)
 
 if wer_full <= 0.20:
-    print(f"\n🎉 ✅ TARGET ACHIEVED!")
-    print(f"   WER {wer_full*100:.1f}% ≤ 20%")
-    print(f"   Your model is ready!")
+    print("\n🎉 ✅ TARGET ACHIEVED!")
+    print(f"   WER {wer_full * 100:.1f}% ≤ 20%")
+    print("   Your model is ready!")
 elif wer_full <= 0.30:
-    print(f"\n✓ Good: {wer_full*100:.1f}%")
+    print(f"\n✓ Good: {wer_full * 100:.1f}%")
 else:
-    print(f"\n⚠️  WER: {wer_full*100:.1f}%")
+    print(f"\n⚠️  WER: {wer_full * 100:.1f}%")
 
 # Samples
-print(f"\n📝 Samples:")
+print("\n📝 Samples:")
 for i in range(min(5, len(valid_pairs))):
     pred, ref = valid_pairs[i]
     seg_wer = wer(ref, pred) if ref and pred else 0
-    print(f"\n{i+1}. WER: {seg_wer*100:.1f}%")
+    print(f"\n{i + 1}. WER: {seg_wer * 100:.1f}%")
     print(f"   REF: {ref[:70]}...")
     print(f"   HYP: {pred[:70]}...")
 
@@ -184,6 +190,6 @@ with open(output_path, "w") as f:
     json.dump(results, f, indent=2)
 
 print(f"\n💾 Saved: {output_path}")
-print("="*80)
+print("=" * 80)
 print("✅ DONE!")
-print("="*80)
+print("=" * 80)

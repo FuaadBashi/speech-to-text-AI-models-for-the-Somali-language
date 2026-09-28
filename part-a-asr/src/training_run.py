@@ -2,18 +2,18 @@
 # FIXED EVALUATION - COPY THIS ENTIRE CELL
 # ============================================================================
 import json
-import os
-import torch
+
 import librosa
 import numpy as np
-from transformers import WhisperForConditionalGeneration, WhisperProcessor
-from transformers.models.whisper.english_normalizer import BasicTextNormalizer
+import torch
 from jiwer import wer
 from tqdm import tqdm
+from transformers import WhisperForConditionalGeneration, WhisperProcessor
+from transformers.models.whisper.english_normalizer import BasicTextNormalizer
 
-print("="*80)
+print("=" * 80)
 print("FIXED EVALUATION WITH ANTI-REPETITION")
-print("="*80)
+print("=" * 80)
 
 # Load model
 print("\n📦 Loading model...")
@@ -44,7 +44,7 @@ print(f"✓ Loaded {len(segments)} segments")
 normalizer = BasicTextNormalizer()
 
 # Evaluate
-print(f"\n🚀 Evaluating with FIXED generation...")
+print("\n🚀 Evaluating with FIXED generation...")
 print("   ✓ no_repeat_ngram_size=3 (PREVENTS REPETITION)")
 print("   ✓ Skip silent segments")
 print()
@@ -79,7 +79,7 @@ for seg in tqdm(segments, desc="Processing"):
                 min_new_tokens=1,
                 num_beams=5,
                 length_penalty=1.0,
-                no_repeat_ngram_size=3,    # ← CRITICAL: Stops "sug sug sug..."
+                no_repeat_ngram_size=3,  # ← CRITICAL: Stops "sug sug sug..."
                 early_stopping=True,
             )
 
@@ -107,28 +107,28 @@ full_ref = " ".join(references_valid)
 wer_full = wer(full_ref, full_pred)
 
 # Results
-print(f"\n{'='*80}")
+print(f"\n{'=' * 80}")
 print("FINAL RESULTS")
-print("="*80)
+print("=" * 80)
 print(f"Segments: {len(valid_pairs)}/{len(segments)} (skipped {skipped})")
 print(f"Words predicted: {len(full_pred.split())}")
 print(f"Words reference: {len(full_ref.split())}")
-print(f"Coverage: {len(full_pred.split())/len(full_ref.split())*100:.1f}%")
-print(f"\n✨ WER: {wer_full*100:.2f}%")
-print("="*80)
+print(f"Coverage: {len(full_pred.split()) / len(full_ref.split()) * 100:.1f}%")
+print(f"\n✨ WER: {wer_full * 100:.2f}%")
+print("=" * 80)
 
 if wer_full <= 0.20:
-    print(f"\n🎉 ✅ TARGET ACHIEVED! WER {wer_full*100:.1f}% ≤ 20%")
+    print(f"\n🎉 ✅ TARGET ACHIEVED! WER {wer_full * 100:.1f}% ≤ 20%")
 else:
-    print(f"\n⚠️  WER {wer_full*100:.1f}% is above 20%")
+    print(f"\n⚠️  WER {wer_full * 100:.1f}% is above 20%")
 
 # Show samples
-print(f"\n📝 First 3 segments:")
+print("\n📝 First 3 segments:")
 for i in range(min(3, len(valid_pairs))):
     pred, ref = valid_pairs[i]
     seg_wer = wer(ref, pred) if ref and pred else 0
-    print(f"\n{i+1}. WER: {seg_wer*100:.1f}%")
+    print(f"\n{i + 1}. WER: {seg_wer * 100:.1f}%")
     print(f"   REF: {ref[:70]}...")
     print(f"   HYP: {pred[:70]}...")
 
-print("\n" + "="*80)
+print("\n" + "=" * 80)
